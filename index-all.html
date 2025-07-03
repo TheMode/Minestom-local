@@ -9011,6 +9011,14 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <code>copyData</code> record component.</div>
 </dd>
+<dt><a href="net/minestom/server/instance/palette/Palette.html#copyFrom(net.minestom.server.instance.palette.Palette)" class="member-name-link">copyFrom(Palette)</a> - Method in interface net.minestom.server.instance.palette.<a href="net/minestom/server/instance/palette/Palette.html" title="interface in net.minestom.server.instance.palette">Palette</a></dt>
+<dd>
+<div class="block">Efficiently copies values from another palette starting at position (0, 0, 0).</div>
+</dd>
+<dt><a href="net/minestom/server/instance/palette/Palette.html#copyFrom(net.minestom.server.instance.palette.Palette,int,int,int)" class="member-name-link">copyFrom(Palette, int, int, int)</a> - Method in interface net.minestom.server.instance.palette.<a href="net/minestom/server/instance/palette/Palette.html" title="interface in net.minestom.server.instance.palette">Palette</a></dt>
+<dd>
+<div class="block">Efficiently copies values from another palette with the given offset.</div>
+</dd>
 <dt><a href="net/minestom/server/network/NetworkBuffer.html#copyTo(long,byte%5B%5D,long,long)" class="member-name-link">copyTo(long, byte[], long, long)</a> - Method in interface net.minestom.server.network.<a href="net/minestom/server/network/NetworkBuffer.html" title="interface in net.minestom.server.network">NetworkBuffer</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/adventure/ComponentHolder.html#copyWithOperator(java.util.function.UnaryOperator)" class="member-name-link">copyWithOperator(UnaryOperator&lt;Component&gt;)</a> - Method in interface net.minestom.server.adventure.<a href="net/minestom/server/adventure/ComponentHolder.html" title="interface in net.minestom.server.adventure">ComponentHolder</a></dt>
@@ -20716,6 +20724,8 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/event/instance/InstanceRegisterEvent.html#getInstance()" class="member-name-link">getInstance()</a> - Method in class net.minestom.server.event.instance.<a href="net/minestom/server/event/instance/InstanceRegisterEvent.html" title="class in net.minestom.server.event.instance">InstanceRegisterEvent</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="net/minestom/server/event/instance/InstanceSectionInvalidateEvent.html#getInstance()" class="member-name-link">getInstance()</a> - Method in class net.minestom.server.event.instance.<a href="net/minestom/server/event/instance/InstanceSectionInvalidateEvent.html" title="class in net.minestom.server.event.instance">InstanceSectionInvalidateEvent</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/event/instance/InstanceTickEvent.html#getInstance()" class="member-name-link">getInstance()</a> - Method in class net.minestom.server.event.instance.<a href="net/minestom/server/event/instance/InstanceTickEvent.html" title="class in net.minestom.server.event.instance">InstanceTickEvent</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/event/instance/InstanceUnregisterEvent.html#getInstance()" class="member-name-link">getInstance()</a> - Method in class net.minestom.server.event.instance.<a href="net/minestom/server/event/instance/InstanceUnregisterEvent.html" title="class in net.minestom.server.event.instance">InstanceUnregisterEvent</a></dt>
@@ -26667,6 +26677,12 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <code>instances</code> record component.</div>
 </dd>
+<dt><a href="net/minestom/server/event/instance/InstanceSectionInvalidateEvent.html" class="type-name-link" title="class in net.minestom.server.event.instance">InstanceSectionInvalidateEvent</a> - Class in <a href="net/minestom/server/event/instance/package-summary.html">net.minestom.server.event.instance</a></dt>
+<dd>
+<div class="block">This event is triggered when a section of an instance is manually marked as invalid.</div>
+</dd>
+<dt><a href="net/minestom/server/event/instance/InstanceSectionInvalidateEvent.html#%3Cinit%3E(net.minestom.server.instance.Instance,int,int,int)" class="member-name-link">InstanceSectionInvalidateEvent(Instance, int, int, int)</a> - Constructor for class net.minestom.server.event.instance.<a href="net/minestom/server/event/instance/InstanceSectionInvalidateEvent.html" title="class in net.minestom.server.event.instance">InstanceSectionInvalidateEvent</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/snapshot/InstanceSnapshot.html" class="type-name-link" title="interface in net.minestom.server.snapshot">InstanceSnapshot</a> - Interface in <a href="net/minestom/server/snapshot/package-summary.html">net.minestom.server.snapshot</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/event/instance/InstanceTickEvent.html" class="type-name-link" title="class in net.minestom.server.event.instance">InstanceTickEvent</a> - Class in <a href="net/minestom/server/event/instance/package-summary.html">net.minestom.server.event.instance</a></dt>
@@ -26946,6 +26962,8 @@ loadScripts(document, 'script');</script>
 <dt><a href="net/minestom/server/instance/LightingChunk.html#invalidateNeighborsSection(int)" class="member-name-link">invalidateNeighborsSection(int)</a> - Method in class net.minestom.server.instance.<a href="net/minestom/server/instance/LightingChunk.html" title="class in net.minestom.server.instance">LightingChunk</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/instance/LightingChunk.html#invalidateResendDelay()" class="member-name-link">invalidateResendDelay()</a> - Method in class net.minestom.server.instance.<a href="net/minestom/server/instance/LightingChunk.html" title="class in net.minestom.server.instance">LightingChunk</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="net/minestom/server/instance/Instance.html#invalidateSection(int,int,int)" class="member-name-link">invalidateSection(int, int, int)</a> - Method in class net.minestom.server.instance.<a href="net/minestom/server/instance/Instance.html" title="class in net.minestom.server.instance">Instance</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/network/ConnectionManager.html#invalidateTags()" class="member-name-link">invalidateTags()</a> - Method in class net.minestom.server.network.<a href="net/minestom/server/network/ConnectionManager.html" title="class in net.minestom.server.network">ConnectionManager</a></dt>
 <dd>&nbsp;</dd>
@@ -33511,6 +33529,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <code>offset</code> record component.</div>
 </dd>
+<dt><a href="net/minestom/server/instance/palette/Palette.html#offset(int)" class="member-name-link">offset(int)</a> - Method in interface net.minestom.server.instance.palette.<a href="net/minestom/server/instance/palette/Palette.html" title="interface in net.minestom.server.instance.palette">Palette</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/network/packet/server/play/ParticlePacket.html#offsetX()" class="member-name-link">offsetX()</a> - Method in record class net.minestom.server.network.packet.server.play.<a href="net/minestom/server/network/packet/server/play/ParticlePacket.html" title="class in net.minestom.server.network.packet.server.play">ParticlePacket</a></dt>
 <dd>
 <div class="block">Returns the value of the <code>offsetX</code> record component.</div>
@@ -38177,6 +38197,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <code>replace</code> record component.</div>
 </dd>
+<dt><a href="net/minestom/server/instance/palette/Palette.html#replace(int,int)" class="member-name-link">replace(int, int)</a> - Method in interface net.minestom.server.instance.palette.<a href="net/minestom/server/instance/palette/Palette.html" title="interface in net.minestom.server.instance.palette">Palette</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/instance/palette/Palette.html#replace(int,int,int,java.util.function.IntUnaryOperator)" class="member-name-link">replace(int, int, int, IntUnaryOperator)</a> - Method in interface net.minestom.server.instance.palette.<a href="net/minestom/server/instance/palette/Palette.html" title="interface in net.minestom.server.instance.palette">Palette</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/instance/palette/Palette.html#replaceAll(net.minestom.server.instance.palette.Palette.EntryFunction)" class="member-name-link">replaceAll(Palette.EntryFunction)</a> - Method in interface net.minestom.server.instance.palette.<a href="net/minestom/server/instance/palette/Palette.html" title="interface in net.minestom.server.instance.palette">Palette</a></dt>
@@ -39287,6 +39309,16 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/coordinate/Vec.html#SECTION" class="member-name-link">SECTION</a> - Static variable in record class net.minestom.server.coordinate.<a href="net/minestom/server/coordinate/Vec.html" title="class in net.minestom.server.coordinate">Vec</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="net/minestom/server/coordinate/CoordConversion.html#SECTION_BLOCK_COUNT" class="member-name-link">SECTION_BLOCK_COUNT</a> - Static variable in class net.minestom.server.coordinate.<a href="net/minestom/server/coordinate/CoordConversion.html" title="class in net.minestom.server.coordinate">CoordConversion</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="net/minestom/server/coordinate/CoordConversion.html#sectionAligned(int)" class="member-name-link">sectionAligned(int)</a> - Static method in class net.minestom.server.coordinate.<a href="net/minestom/server/coordinate/CoordConversion.html" title="class in net.minestom.server.coordinate">CoordConversion</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="net/minestom/server/coordinate/CoordConversion.html#sectionAligned(int,int,int)" class="member-name-link">sectionAligned(int, int, int)</a> - Static method in class net.minestom.server.coordinate.<a href="net/minestom/server/coordinate/CoordConversion.html" title="class in net.minestom.server.coordinate">CoordConversion</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="net/minestom/server/coordinate/CoordConversion.html#sectionAligned(net.minestom.server.coordinate.Point)" class="member-name-link">sectionAligned(Point)</a> - Static method in class net.minestom.server.coordinate.<a href="net/minestom/server/coordinate/CoordConversion.html" title="class in net.minestom.server.coordinate">CoordConversion</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="net/minestom/server/coordinate/CoordConversion.html#sectionAligned(net.minestom.server.coordinate.Point,net.minestom.server.coordinate.Point)" class="member-name-link">sectionAligned(Point, Point)</a> - Static method in class net.minestom.server.coordinate.<a href="net/minestom/server/coordinate/CoordConversion.html" title="class in net.minestom.server.coordinate">CoordConversion</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/coordinate/CoordConversion.html#sectionBlockIndex(int,int,int)" class="member-name-link">sectionBlockIndex(int, int, int)</a> - Static method in class net.minestom.server.coordinate.<a href="net/minestom/server/coordinate/CoordConversion.html" title="class in net.minestom.server.coordinate">CoordConversion</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/coordinate/CoordConversion.html#sectionBlockIndexGetX(int)" class="member-name-link">sectionBlockIndexGetX(int)</a> - Static method in class net.minestom.server.coordinate.<a href="net/minestom/server/coordinate/CoordConversion.html" title="class in net.minestom.server.coordinate">CoordConversion</a></dt>
@@ -39295,7 +39327,17 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/coordinate/CoordConversion.html#sectionBlockIndexGetZ(int)" class="member-name-link">sectionBlockIndexGetZ(int)</a> - Static method in class net.minestom.server.coordinate.<a href="net/minestom/server/coordinate/CoordConversion.html" title="class in net.minestom.server.coordinate">CoordConversion</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="net/minestom/server/coordinate/CoordConversion.html#sectionIndex(int,int,int)" class="member-name-link">sectionIndex(int, int, int)</a> - Static method in class net.minestom.server.coordinate.<a href="net/minestom/server/coordinate/CoordConversion.html" title="class in net.minestom.server.coordinate">CoordConversion</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/instance/palette/Palettes.html#sectionIndex(int,int,int,int)" class="member-name-link">sectionIndex(int, int, int, int)</a> - Static method in class net.minestom.server.instance.palette.<a href="net/minestom/server/instance/palette/Palettes.html" title="class in net.minestom.server.instance.palette">Palettes</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="net/minestom/server/coordinate/CoordConversion.html#sectionIndexGetX(long)" class="member-name-link">sectionIndexGetX(long)</a> - Static method in class net.minestom.server.coordinate.<a href="net/minestom/server/coordinate/CoordConversion.html" title="class in net.minestom.server.coordinate">CoordConversion</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="net/minestom/server/coordinate/CoordConversion.html#sectionIndexGetY(long)" class="member-name-link">sectionIndexGetY(long)</a> - Static method in class net.minestom.server.coordinate.<a href="net/minestom/server/coordinate/CoordConversion.html" title="class in net.minestom.server.coordinate">CoordConversion</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="net/minestom/server/coordinate/CoordConversion.html#sectionIndexGetZ(long)" class="member-name-link">sectionIndexGetZ(long)</a> - Static method in class net.minestom.server.coordinate.<a href="net/minestom/server/coordinate/CoordConversion.html" title="class in net.minestom.server.coordinate">CoordConversion</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="net/minestom/server/coordinate/CoordConversion.html#sectionIndexGlobal(int,int,int)" class="member-name-link">sectionIndexGlobal(int, int, int)</a> - Static method in class net.minestom.server.coordinate.<a href="net/minestom/server/coordinate/CoordConversion.html" title="class in net.minestom.server.coordinate">CoordConversion</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/instance/generator/GeneratorImpl.SectionModifierImpl.html#%3Cinit%3E(net.minestom.server.registry.DynamicRegistry,net.minestom.server.coordinate.Point,net.minestom.server.coordinate.Point,net.minestom.server.coordinate.Point,net.minestom.server.instance.generator.GeneratorImpl.GenSection,boolean)" class="member-name-link">SectionModifierImpl(DynamicRegistry&lt;Biome&gt;, Point, Point, Point, GeneratorImpl.GenSection, boolean)</a> - Constructor for record class net.minestom.server.instance.generator.<a href="net/minestom/server/instance/generator/GeneratorImpl.SectionModifierImpl.html" title="class in net.minestom.server.instance.generator">GeneratorImpl.SectionModifierImpl</a></dt>
 <dd>
@@ -39311,6 +39353,12 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the value of the <code>sections</code> record component.</div>
 </dd>
+<dt><a href="net/minestom/server/event/instance/InstanceSectionInvalidateEvent.html#sectionX()" class="member-name-link">sectionX()</a> - Method in class net.minestom.server.event.instance.<a href="net/minestom/server/event/instance/InstanceSectionInvalidateEvent.html" title="class in net.minestom.server.event.instance">InstanceSectionInvalidateEvent</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="net/minestom/server/event/instance/InstanceSectionInvalidateEvent.html#sectionY()" class="member-name-link">sectionY()</a> - Method in class net.minestom.server.event.instance.<a href="net/minestom/server/event/instance/InstanceSectionInvalidateEvent.html" title="class in net.minestom.server.event.instance">InstanceSectionInvalidateEvent</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="net/minestom/server/event/instance/InstanceSectionInvalidateEvent.html#sectionZ()" class="member-name-link">sectionZ()</a> - Method in class net.minestom.server.event.instance.<a href="net/minestom/server/event/instance/InstanceSectionInvalidateEvent.html" title="class in net.minestom.server.event.instance">InstanceSectionInvalidateEvent</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="net/minestom/server/item/component/SeededContainerLoot.html#seed()" class="member-name-link">seed()</a> - Method in record class net.minestom.server.item.component.<a href="net/minestom/server/item/component/SeededContainerLoot.html" title="class in net.minestom.server.item.component">SeededContainerLoot</a></dt>
 <dd>
 <div class="block">Returns the value of the <code>seed</code> record component.</div>
