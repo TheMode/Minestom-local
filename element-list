@@ -6,6 +6,7 @@ net.minestom.server.adventure.audience
 net.minestom.server.adventure.bossbar
 net.minestom.server.adventure.provider
 net.minestom.server.adventure.serializer.nbt
+net.minestom.server.codec
 net.minestom.server.collision
 net.minestom.server.color
 net.minestom.server.command
@@ -23,7 +24,6 @@ net.minestom.server.component
 net.minestom.server.condition
 net.minestom.server.coordinate
 net.minestom.server.crypto
-net.minestom.server.effects
 net.minestom.server.entity
 net.minestom.server.entity.ai
 net.minestom.server.entity.ai.goal
@@ -71,10 +71,8 @@ net.minestom.server.extras.query
 net.minestom.server.extras.query.event
 net.minestom.server.extras.query.response
 net.minestom.server.extras.velocity
-net.minestom.server.fluid
 net.minestom.server.game
 net.minestom.server.gamedata
-net.minestom.server.gamedata.tags
 net.minestom.server.instance
 net.minestom.server.instance.anvil
 net.minestom.server.instance.batch
@@ -83,13 +81,13 @@ net.minestom.server.instance.block.banner
 net.minestom.server.instance.block.jukebox
 net.minestom.server.instance.block.predicate
 net.minestom.server.instance.block.rule
+net.minestom.server.instance.fluid
 net.minestom.server.instance.generator
 net.minestom.server.instance.heightmap
 net.minestom.server.instance.light
 net.minestom.server.instance.palette
 net.minestom.server.inventory
 net.minestom.server.inventory.click
-net.minestom.server.inventory.condition
 net.minestom.server.inventory.type
 net.minestom.server.item
 net.minestom.server.item.armor
@@ -97,6 +95,7 @@ net.minestom.server.item.book
 net.minestom.server.item.component
 net.minestom.server.item.crossbow
 net.minestom.server.item.enchant
+net.minestom.server.item.instrument
 net.minestom.server.listener
 net.minestom.server.listener.common
 net.minestom.server.listener.manager
@@ -156,3 +155,4 @@ net.minestom.server.utils.url
 net.minestom.server.utils.validate
 net.minestom.server.world
 net.minestom.server.world.biome
+net.minestom.server.worldevent
