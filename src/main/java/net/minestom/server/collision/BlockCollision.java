@@ -21,19 +21,11 @@ final class BlockCollision {
     static PhysicsResult handlePhysics(@NotNull BoundingBox boundingBox,
                                        @NotNull Vec velocity, @NotNull Pos entityPosition,
                                        @NotNull Block.Getter getter,
-                                       @Nullable PhysicsResult lastPhysicsResult,
                                        boolean singleCollision) {
         if (velocity.isZero()) {
-            // TODO should return a constant
             return new PhysicsResult(entityPosition, Vec.ZERO, false, false, false, false,
                     velocity, new Point[3], new Shape[3], new Point[3], false, SweepResult.NO_COLLISION);
         }
-        // Fast-exit using cache
-        final PhysicsResult cachedResult = cachedPhysics(velocity, entityPosition, getter, lastPhysicsResult);
-        if (cachedResult != null) {
-            return cachedResult;
-        }
-        // Expensive AABB computation
         return stepPhysics(boundingBox, velocity, entityPosition, getter, singleCollision);
     }
 
@@ -57,34 +49,6 @@ final class BlockCollision {
         return null;
     }
 
-    private static PhysicsResult cachedPhysics(Vec velocity, Pos entityPosition,
-                                               Block.Getter getter, PhysicsResult lastPhysicsResult) {
-        if (lastPhysicsResult != null && lastPhysicsResult.collisionShapes()[1] instanceof ShapeImpl shape) {
-            var currentBlock = getter.getBlock(lastPhysicsResult.collisionShapePositions()[1], Block.Getter.Condition.TYPE);
-            var lastBlockBoxes = shape.collisionBoundingBoxes();
-            var currentBlockBoxes = ((ShapeImpl) currentBlock.registry().collisionShape()).collisionBoundingBoxes();
-
-            // Fast exit if entity hasn't moved
-            if (lastPhysicsResult.collisionY()
-                    && velocity.y() == lastPhysicsResult.originalDelta().y()
-                    // Check block below to fast exit gravity
-                    && currentBlockBoxes.equals(lastBlockBoxes)
-                    && velocity.x() == 0 && velocity.z() == 0
-                    && entityPosition.samePoint(lastPhysicsResult.newPosition())
-                    && !lastBlockBoxes.isEmpty()) {
-                if (lastPhysicsResult.cached()) {
-                    return lastPhysicsResult;
-                } else {
-                    return new PhysicsResult(lastPhysicsResult.newPosition(), lastPhysicsResult.newVelocity(),
-                            lastPhysicsResult.isOnGround(), lastPhysicsResult.collisionX(), lastPhysicsResult.collisionY(),
-                            lastPhysicsResult.collisionZ(), lastPhysicsResult.originalDelta(), lastPhysicsResult.collisionPoints(),
-                            lastPhysicsResult.collisionShapes(), lastPhysicsResult.collisionShapePositions(), lastPhysicsResult.hasCollision(), lastPhysicsResult.res(), true);
-                }
-            }
-        }
-        return null;
-    }
-
     private static PhysicsResult stepPhysics(@NotNull BoundingBox boundingBox,
                                              @NotNull Vec velocity, @NotNull Pos entityPosition,
                                              @NotNull Block.Getter getter, boolean singleCollision) {
@@ -102,9 +66,8 @@ final class BlockCollision {
         // Query faces to get the points needed for collision
         final Vec[] allFaces = calculateFaces(velocity, boundingBox);
         PhysicsResult result = computePhysics(boundingBox, velocity, entityPosition, getter, allFaces, finalResult);
-        // Loop until no collisions are found.
-        // When collisions are found, the collision axis is set to 0
-        // Looping until there are no collisions will allow the entity to move in axis other than the collision axis after a collision.
+
+        // Loop until no collisions are found
         while (result.collisionX() || result.collisionY() || result.collisionZ()) {
             // Reset final result
             finalResult.normalX = 0;
@@ -151,7 +114,7 @@ final class BlockCollision {
 
         return new PhysicsResult(result.newPosition(), new Vec(newDeltaX, newDeltaY, newDeltaZ),
                 newDeltaY == 0 && velocity.y() < 0,
-                foundCollisionX, foundCollisionY, foundCollisionZ, velocity, collidedPoints, collisionShapes, collisionShapePositions, hasCollided, finalResult);
+                foundCollisionX, foundCollisionY, foundCollisionZ, velocity, collidedPoints, collisionShapes, collisionShapePositions, hasCollided, finalResult, false);
     }
 
     private static PhysicsResult computePhysics(@NotNull BoundingBox boundingBox,
@@ -159,10 +122,8 @@ final class BlockCollision {
                                                 @NotNull Block.Getter getter,
                                                 @NotNull Vec[] allFaces,
                                                 @NotNull SweepResult finalResult) {
-        // If the movement is small we don't need to run the expensive ray casting.
-        // Positions of move less than one can have hardcoded blocks to check for every direction
-        // Diagonals are a special case which will work with fast physics
-        if (velocity.length() <= 1 || isDiagonal(velocity)) {
+        // Use appropriate physics method based on velocity magnitude
+        if (velocity.length() <= 1) {
             fastPhysics(boundingBox, velocity, entityPosition, getter, allFaces, finalResult);
         } else {
             slowPhysics(boundingBox, velocity, entityPosition, getter, allFaces, finalResult);
@@ -188,11 +149,7 @@ final class BlockCollision {
 
         return new PhysicsResult(finalPos, new Vec(remainingX, remainingY, remainingZ),
                 collisionY, collisionX, collisionY, collisionZ,
-                Vec.ZERO, null, null, null, false, finalResult);
-    }
-
-    private static boolean isDiagonal(Vec velocity) {
-        return Math.abs(velocity.x()) == 1 && Math.abs(velocity.z()) == 1;
+                Vec.ZERO, null, null, null, false, finalResult, false);
     }
 
     private static void slowPhysics(@NotNull BoundingBox boundingBox,

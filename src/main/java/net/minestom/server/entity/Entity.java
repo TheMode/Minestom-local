@@ -121,7 +121,6 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
     protected boolean onGround;
 
     protected BoundingBox boundingBox;
-    private PhysicsResult previousPhysicsResult = null;
 
     protected Entity vehicle;
 
@@ -640,8 +639,7 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
         boolean entityFlying = entityIsPlayer && ((Player) this).isFlying();
         final Block.Getter chunkCache = new ChunkCache(instance, currentChunk, Block.STONE);
         PhysicsResult physicsResult = PhysicsUtils.simulateMovement(position, velocity.div(ServerFlag.SERVER_TICKS_PER_SECOND), boundingBox,
-                instance.getWorldBorder(), chunkCache, aerodynamics, hasNoGravity(), hasPhysics, onGround, entityFlying, previousPhysicsResult);
-        this.previousPhysicsResult = physicsResult;
+                instance.getWorldBorder(), chunkCache, aerodynamics, hasNoGravity(), hasPhysics, onGround, entityFlying);
 
         Chunk finalChunk = ChunkUtils.retrieve(instance, currentChunk, physicsResult.newPosition());
         if (!ChunkUtils.isLoaded(finalChunk)) return;
@@ -839,7 +837,6 @@ public class Entity implements Viewable, Tickable, Schedulable, Snapshotable, Ev
         setPositionInternal(spawnPosition);
         this.previousPosition = spawnPosition;
         this.lastSyncedPosition = spawnPosition;
-        this.previousPhysicsResult = null;
         this.instance = instance;
         return instance.loadOptionalChunk(spawnPosition).thenAccept(chunk -> {
             try {

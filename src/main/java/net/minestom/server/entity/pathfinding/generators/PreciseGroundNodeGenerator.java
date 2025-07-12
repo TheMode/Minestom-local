@@ -128,9 +128,7 @@ public class PreciseGroundNodeGenerator implements NodeGenerator {
     public @NotNull OptionalDouble gravitySnap(Block.@NotNull Getter getter, double pointOrgX, double pointOrgY, double pointOrgZ, @NotNull BoundingBox boundingBox, double maxFall) {
         final double pointX = (int) Math.floor(pointOrgX) + 0.5;
         final double pointZ = (int) Math.floor(pointOrgZ) + 0.5;
-        final PhysicsResult res = CollisionUtils.handlePhysics(getter, boundingBox,
-                new Pos(pointX, pointOrgY, pointZ), new Vec(0, -MAX_FALL_DISTANCE, 0),
-                null, true);
+        final PhysicsResult res = CollisionUtils.handlePhysics(getter, boundingBox, new Pos(pointX, pointOrgY, pointZ), new Vec(0, -MAX_FALL_DISTANCE, 0), true);
         return OptionalDouble.of(res.newPosition().y());
     }
 
@@ -139,7 +137,7 @@ public class PreciseGroundNodeGenerator implements NodeGenerator {
         final Point end = endOrg.add(0, Vec.EPSILON, 0);
         final Point start = startOrg.add(0, Vec.EPSILON, 0);
         final Point diff = end.sub(start);
-        PhysicsResult res = CollisionUtils.handlePhysics(getter, boundingBox, Pos.fromPoint(start), Vec.fromPoint(diff), null, false);
+        PhysicsResult res = CollisionUtils.handlePhysics(getter, boundingBox, Pos.fromPoint(start), Vec.fromPoint(diff), false);
         return !res.collisionZ() && !res.collisionY() && !res.collisionX();
     }
 }

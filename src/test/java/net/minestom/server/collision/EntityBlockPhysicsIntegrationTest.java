@@ -1,8 +1,5 @@
 package net.minestom.server.collision;
 
-import net.minestom.server.utils.block.BlockIterator;
-import net.minestom.testing.Env;
-import net.minestom.testing.EnvTest;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.coordinate.Vec;
@@ -10,10 +7,10 @@ import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.EntityType;
 import net.minestom.server.entity.metadata.other.SlimeMeta;
 import net.minestom.server.instance.block.Block;
+import net.minestom.testing.Env;
+import net.minestom.testing.EnvTest;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -652,9 +649,9 @@ public class EntityBlockPhysicsIntegrationTest {
 
     @Test
     public void tmp(Env env) {
-        BoundingBox boundingBox = new BoundingBox(3,2.8,3);
-        Vec velocity = new Vec(1,3,5);
-        Pos entityPosition = new Pos(0,0,0);
+        BoundingBox boundingBox = new BoundingBox(3, 2.8, 3);
+        Vec velocity = new Vec(1, 3, 5);
+        Pos entityPosition = new Pos(0, 0, 0);
     }
 
     // Checks C include all checks for crossing one intermediate block (3 block checks)
@@ -966,127 +963,6 @@ public class EntityBlockPhysicsIntegrationTest {
     }
 
     @Test
-    public void entityPhysicsCheckNoMoveCache(Env env) {
-        var instance = env.createFlatInstance();
-        var entity = new Entity(EntityType.ZOMBIE);
-
-        entity.setInstance(instance, new Pos(5, 42, 5)).join();
-        assertEquals(instance, entity.getInstance());
-
-        PhysicsResult res = CollisionUtils.handlePhysics(entity, Vec.ZERO);
-        entity.teleport(res.newPosition());
-        res = CollisionUtils.handlePhysics(entity, Vec.ZERO, res);
-        assertEqualsPoint(new Pos(5, 42, 5), res.newPosition());
-    }
-
-    @Test
-    public void entityPhysicsCheckNoMoveLargeVelocityHit(Env env) {
-        var instance = env.createFlatInstance();
-        var entity = new Entity(EntityType.ZOMBIE);
-
-        final int distance = 20;
-        for (int x = 0; x < distance; ++x) instance.loadChunk(x, 0).join();
-
-        instance.setBlock(distance * 8, 43, 5, Block.STONE);
-
-        entity.setInstance(instance, new Pos(5, 42, 5)).join();
-        assertEquals(instance, entity.getInstance());
-
-        PhysicsResult res = CollisionUtils.handlePhysics(entity, Vec.ZERO);
-        entity.teleport(res.newPosition());
-        res = CollisionUtils.handlePhysics(entity, new Vec((distance - 1) * 16, 0, 0), res);
-        assertEqualsPoint(new Pos(distance * 8 - 0.3, 42, 5), res.newPosition());
-    }
-
-    @Test
-    public void entityPhysicsCheckLargeVelocityHitNoMove(Env env) {
-        var instance = env.createFlatInstance();
-        var entity = new Entity(EntityType.ZOMBIE);
-
-        final int distance = 20;
-        for (int x = 0; x < distance; ++x) instance.loadChunk(x, 0).join();
-
-        instance.setBlock(distance * 8, 43, 5, Block.STONE);
-
-        entity.setInstance(instance, new Pos(5, 42, 5)).join();
-        assertEquals(instance, entity.getInstance());
-
-        PhysicsResult res = CollisionUtils.handlePhysics(entity, new Vec((distance - 1) * 16, 0, 0));
-        entity.teleport(res.newPosition());
-        res = CollisionUtils.handlePhysics(entity, Vec.ZERO, res);
-        assertEqualsPoint(new Pos(distance * 8 - 0.3, 42, 5), res.newPosition());
-    }
-
-    @Test
-    public void entityPhysicsCheckDoorSubBlockSouthRepeat(Env env) {
-        var instance = env.createFlatInstance();
-        Block b = Block.ACACIA_TRAPDOOR.withProperties(Map.of("facing", "south", "open", "true"));
-
-        instance.setBlock(0, 42, 0, b);
-
-        var entity = new Entity(EntityType.ZOMBIE);
-        entity.setInstance(instance, new Pos(0.5, 42.5, 0.5)).join();
-        assertEquals(instance, entity.getInstance());
-
-        PhysicsResult res = CollisionUtils.handlePhysics(entity, new Vec(0, 0, -0.4));
-        entity.teleport(res.newPosition());
-        res = CollisionUtils.handlePhysics(entity, new Vec(0, 0, -0.4), res);
-
-        assertEqualsPoint(new Pos(0.5, 42.5, 0.487), res.newPosition());
-    }
-
-    @Test
-    public void entityPhysicsCheckCollisionDownCache(Env env) {
-        var instance = env.createFlatInstance();
-        instance.setBlock(0, 43, 1, Block.STONE);
-
-        for (int i = -2; i <= 2; ++i)
-            for (int j = -2; j <= 2; ++j)
-                instance.loadChunk(i, j).join();
-
-        var entity = new Entity(EntityType.ZOMBIE);
-        entity.setInstance(instance, new Pos(0, 42, 0)).join();
-        assertEquals(instance, entity.getInstance());
-
-        PhysicsResult res = CollisionUtils.handlePhysics(entity, new Vec(0, 0, 10));
-        entity.teleport(res.newPosition());
-        res = CollisionUtils.handlePhysics(entity, new Vec(0, -10, 0), res);
-
-        assertEqualsPoint(new Pos(0, 40, 0.7), res.newPosition());
-    }
-
-    @Test
-    public void entityPhysicsCheckGravityCached(Env env) {
-        var instance = env.createFlatInstance();
-        instance.setBlock(0, 43, 1, Block.STONE);
-
-        for (int i = -2; i <= 2; ++i)
-            for (int j = -2; j <= 2; ++j)
-                instance.loadChunk(i, j).join();
-
-        var entity = new Entity(EntityType.ZOMBIE);
-        entity.setInstance(instance, new Pos(0, 42, 0)).join();
-        assertEquals(instance, entity.getInstance());
-
-        PhysicsResult res = CollisionUtils.handlePhysics(entity, new Vec(0, 0, 10));
-        entity.teleport(res.newPosition());
-        res = CollisionUtils.handlePhysics(entity, new Vec(0, -10, 0), res);
-        entity.teleport(res.newPosition());
-
-        PhysicsResult lastPhysicsResult;
-
-        for (int x = 0; x < 50; ++x) {
-            lastPhysicsResult = res;
-            res = CollisionUtils.handlePhysics(entity, new Vec(0, -1.7, 0), res);
-            entity.teleport(res.newPosition());
-
-            if (x > 10) assertSame(lastPhysicsResult, res, "Physics result not cached");
-        }
-
-        assertEqualsPoint(new Pos(0, 40, 0.7), res.newPosition());
-    }
-
-    @Test
     public void entityBlockPositionTestSlightlyAbove(Env env) {
         var instance = env.createFlatInstance();
         instance.setBlock(0, 42, 0, Block.STONE);
@@ -1095,7 +971,7 @@ public class EntityBlockPhysicsIntegrationTest {
         entity.setInstance(instance, new Pos(0, 43.00001, 0));
 
         var deltaPos = new Vec(0.0, -10, 0.0);
-        var physicsResult = CollisionUtils.handlePhysics(entity, deltaPos, null);
+        var physicsResult = CollisionUtils.handlePhysics(entity, deltaPos);
 
         var newPos = physicsResult.newPosition();
         assertEquals(43, newPos.blockY());
@@ -1110,36 +986,9 @@ public class EntityBlockPhysicsIntegrationTest {
         entity.setInstance(instance, new Pos(0, 43.5, 0));
 
         var deltaPos = new Vec(0.0, -10, 0.0);
-        var physicsResult = CollisionUtils.handlePhysics(entity, deltaPos, null);
+        var physicsResult = CollisionUtils.handlePhysics(entity, deltaPos);
 
         var newPos = physicsResult.newPosition();
         assertEquals(43, newPos.blockY());
-    }
-
-    @Test
-    public void entityPhysicsCacheTest(Env env) {
-        var instance = env.createFlatInstance();
-        instance.setBlock(0, 42, 0, Block.STONE);
-
-        var entity = new Entity(EntityType.ZOMBIE);
-        entity.setInstance(instance, new Pos(0, 43.5, 0));
-
-        var deltaPos = new Vec(0.0, -10, 0.0);
-        var physicsResult = CollisionUtils.handlePhysics(entity, deltaPos, null);
-
-        var newPos = physicsResult.newPosition();
-        assertEquals(43, newPos.blockY());
-        assertEqualsPoint(new Vec(0, 0, 0), physicsResult.newVelocity());
-        assertEqualsPoint(deltaPos, physicsResult.originalDelta());
-
-        // Create a new instance of the physics result to simulate gravity or we will never cache because velocity would be zero.
-        var velocityFixedResult = new PhysicsResult(physicsResult.newPosition(), physicsResult.newVelocity().add(deltaPos), physicsResult.isOnGround(), physicsResult.collisionX(), physicsResult.collisionY(), physicsResult.collisionZ(), physicsResult.originalDelta(), physicsResult.collisionPoints(), physicsResult.collisionShapes(), physicsResult.collisionShapePositions(), physicsResult.hasCollision(), physicsResult.res(), false);
-
-        var physicsResult2 = CollisionUtils.handlePhysics(instance, entity.getChunk(),
-                entity.getBoundingBox(),
-                physicsResult.newPosition(), deltaPos,
-                velocityFixedResult, false);
-
-        assertTrue(physicsResult2.cached());
     }
 }
