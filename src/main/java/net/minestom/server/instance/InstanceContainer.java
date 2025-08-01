@@ -223,27 +223,29 @@ public class InstanceContainer extends Instance {
             final BlockVec min = cuboid.min(), max = cuboid.max();
             final boolean sectionAligned = sectionAligned(min, max);
             synchronized (this) {
-                this.version.incrementAndGet();
                 if (sectionAligned) {
                     final int minSectionX = min.sectionX(), minSectionY = min.sectionY(), minSectionZ = min.sectionZ();
                     final int maxSectionX = max.sectionX(), maxSectionY = max.sectionY(), maxSectionZ = max.sectionZ();
+                    final int stateId = block.stateId();
                     for (int sectionX = minSectionX; sectionX <= maxSectionX; sectionX++) {
                         for (int sectionY = minSectionY; sectionY <= maxSectionY; sectionY++) {
                             for (int sectionZ = minSectionZ; sectionZ <= maxSectionZ; sectionZ++) {
                                 final Chunk chunk = getChunk(sectionX, sectionZ);
-                                if (chunk == null) continue;
+                                if (chunk == null || chunk.isReadOnly()) continue;
                                 Section section = chunk.getSection(sectionY);
-                                section.blockPalette().fill(block.stateId());
+                                section.blockPalette().fill(stateId);
                                 invalidateSection(sectionX, sectionY, sectionZ);
                             }
                         }
                     }
                 } else {
-                    for (int x = min.blockX(); x <= max.blockX(); x++) {
-                        for (int y = min.blockY(); y <= max.blockY(); y++) {
-                            for (int z = min.blockZ(); z <= max.blockZ(); z++) {
+                    final int minX = min.blockX(), minY = min.blockY(), minZ = min.blockZ();
+                    final int maxX = max.blockX(), maxY = max.blockY(), maxZ = max.blockZ();
+                    for (int x = minX; x <= maxX; x++) {
+                        for (int y = minY; y <= maxY; y++) {
+                            for (int z = minZ; z <= maxZ; z++) {
                                 final Chunk chunk = getChunkAt(x, z);
-                                if (chunk == null) continue;
+                                if (chunk == null || chunk.isReadOnly()) continue;
                                 UNSAFE_setBlock(chunk, x, y, z, block, null, null, true, 0);
                             }
                         }
