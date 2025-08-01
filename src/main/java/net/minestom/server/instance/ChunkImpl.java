@@ -47,6 +47,12 @@ import static net.minestom.server.network.NetworkBuffer.SHORT;
 final class ChunkImpl implements Chunk {
     private static final Logger LOGGER = LoggerFactory.getLogger(ChunkImpl.class);
 
+    static Viewable instanceChunkView(Instance instance, int chunkX, int chunkZ) {
+        final List<SharedInstance> shared = instance instanceof InstanceContainer instanceContainer ?
+                instanceContainer.getSharedInstances() : List.of();
+        return instance.getEntityTracker().viewable(shared, chunkX, chunkZ);
+    }
+
     private final Instance instance;
     private final int chunkX, chunkZ;
     final DimensionType dimension;
@@ -190,6 +196,7 @@ final class ChunkImpl implements Chunk {
     @Override
     public Chunk copy(Instance instance, int chunkX, int chunkZ) {
         final List<Section> sections = this.sections.stream().map(Section::clone).toList();
+        Viewable viewable = instanceChunkView(instance, chunkX, chunkZ);
         return new ChunkImpl(instance, chunkX, chunkZ, flags, viewable, sections);
     }
 
