@@ -79,7 +79,7 @@ public final class ChunkLight {
             Chunk chunk = instance.getChunk(x, z);
             if (chunk == null) return null;
             ChunkImpl impl = (ChunkImpl) chunk;
-            if (!impl.lighting) return null;
+            if (!impl.hasLightEngine()) return null;
             if (y - chunk.getMinSection() < 0 || y - chunk.getMaxSection() >= 0) return null;
             final Section section = chunk.getSection(y);
             return switch (type) {
@@ -92,7 +92,7 @@ public final class ChunkLight {
             Chunk chunk = instance.getChunk(x, z);
             if (chunk == null) return null;
             ChunkImpl impl = (ChunkImpl) chunk;
-            if (!impl.lighting) return null;
+            if (!impl.hasLightEngine()) return null;
             if (y - chunk.getMinSection() < 0 || y - chunk.getMaxSection() >= 0) return null;
             return chunk.getSection(y).blockPalette();
         };
@@ -160,7 +160,7 @@ public final class ChunkLight {
         synchronized (instance) {
             for (Chunk chunk : chunks) {
                 ChunkImpl impl = (ChunkImpl) chunk;
-                if (!impl.lighting) continue;
+                if (!impl.hasLightEngine()) continue;
                 for (int sectionIndex = chunk.getMinSection(); sectionIndex < chunk.getMaxSection(); sectionIndex++) {
                     Section section = chunk.getSection(sectionIndex);
                     section.blockLight().invalidate();
@@ -208,7 +208,7 @@ public final class ChunkLight {
                 Chunk chunkCheck = instance.getChunk(x, z);
                 if (chunkCheck == null) continue;
                 ChunkImpl impl = (ChunkImpl) chunkCheck;
-                if (impl.lighting) {
+                if (impl.hasLightEngine()) {
                     // Ensure heightmap is calculated before taking values from it
                     impl.getOcclusionMap();
                     highestRegionPoint = Math.max(highestRegionPoint, impl.highestBlock);
@@ -270,7 +270,7 @@ public final class ChunkLight {
         Chunk c = instance.getChunk(sectionX, sectionZ);
         if (c == null) return Set.of();
         ChunkImpl impl = (ChunkImpl) c;
-        if (!impl.lighting) return Set.of();
+        if (!impl.hasLightEngine()) return Set.of();
         synchronized (instance) {
             Set<Point> collected = collectRequiredNearby(instance, new BlockVec(sectionX, sectionY, sectionZ), type);
             return relight(instance, collected, type);

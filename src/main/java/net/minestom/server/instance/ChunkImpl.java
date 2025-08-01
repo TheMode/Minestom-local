@@ -59,9 +59,7 @@ final class ChunkImpl implements Chunk {
     final Heightmap worldSurface;
 
     // Options
-    final boolean lighting;
-    final boolean shouldGenerate;
-    final boolean readOnly;
+    final long flags;
 
     private volatile boolean loaded = true;
     private final Viewable viewable;
@@ -82,19 +80,15 @@ final class ChunkImpl implements Chunk {
     // Data
     private final TagHandler tagHandler = TagHandler.newHandler();
 
-    ChunkImpl(Instance instance, int chunkX, int chunkZ,
-              DimensionType dimension,
-              boolean lighting, boolean shouldGenerate, boolean readOnly,
-              Viewable viewable, List<Section> sections) {
+    ChunkImpl(Instance instance, int chunkX, int chunkZ, long flags, Viewable viewable, List<Section> sections) {
         this.instance = instance;
         this.chunkX = chunkX;
         this.chunkZ = chunkZ;
+        final DimensionType dimension = instance.getCachedDimensionType();
         this.dimension = dimension;
         this.minSection = dimension.minY() / SECTION_SIZE;
         this.maxSection = (dimension.minY() + dimension.height()) / SECTION_SIZE;
-        this.lighting = lighting;
-        this.shouldGenerate = shouldGenerate;
-        this.readOnly = readOnly;
+        this.flags = flags;
         this.viewable = viewable;
         if (sections.size() != maxSection - minSection) {
             throw new IllegalArgumentException("Invalid sections size: " + sections.size() + ", expected: " + (maxSection - minSection));
@@ -105,19 +99,15 @@ final class ChunkImpl implements Chunk {
         worldSurface = Heightmap.worldSurface(this);
     }
 
-    ChunkImpl(Instance instance, int chunkX, int chunkZ,
-              DimensionType dimension,
-              boolean lighting, boolean shouldGenerate, boolean readOnly,
-              Viewable viewable) {
+    ChunkImpl(Instance instance, int chunkX, int chunkZ, long flags, Viewable viewable) {
         this.instance = instance;
         this.chunkX = chunkX;
         this.chunkZ = chunkZ;
+        final DimensionType dimension = instance.getCachedDimensionType();
         this.dimension = dimension;
         this.minSection = dimension.minY() / SECTION_SIZE;
         this.maxSection = (dimension.minY() + dimension.height()) / SECTION_SIZE;
-        this.lighting = lighting;
-        this.shouldGenerate = shouldGenerate;
-        this.readOnly = readOnly;
+        this.flags = flags;
         this.viewable = viewable;
         var sectionsTemp = new Section[maxSection - minSection];
         Arrays.setAll(sectionsTemp, value -> Section.section());
@@ -180,7 +170,7 @@ final class ChunkImpl implements Chunk {
         }
 
         // Lighting
-        if (lighting && doneInit && resendTimer.get() > 0) {
+        if (hasLightEngine() && doneInit && resendTimer.get() > 0) {
             if (resendTimer.decrementAndGet() == 0) {
                 sendLighting();
             }
@@ -200,7 +190,7 @@ final class ChunkImpl implements Chunk {
     @Override
     public Chunk copy(Instance instance, int chunkX, int chunkZ) {
         final List<Section> sections = this.sections.stream().map(Section::clone).toList();
-        return new ChunkImpl(instance, chunkX, chunkZ, dimension, lighting, shouldGenerate, readOnly, viewable, sections);
+        return new ChunkImpl(instance, chunkX, chunkZ, flags, viewable, sections);
     }
 
     @Override
@@ -235,12 +225,17 @@ final class ChunkImpl implements Chunk {
 
     @Override
     public boolean shouldGenerate() {
-        return shouldGenerate;
+        return (flags & GENERATE_FLAG) != 0;
     }
 
     @Override
     public boolean isReadOnly() {
-        return readOnly;
+        return (flags & READONLY_FLAG) != 0;
+    }
+
+    @Override
+    public boolean hasLightEngine() {
+        return (flags & LIGHT_ENGINE_FLAG) != 0;
     }
 
     @Override
@@ -309,7 +304,7 @@ final class ChunkImpl implements Chunk {
     }
 
     private LightData createLightData(boolean requiredFullChunk) {
-        if (lighting) return computeLightData(requiredFullChunk);
+        if (hasLightEngine()) return computeLightData(requiredFullChunk);
         BitSet skyMask = new BitSet();
         BitSet blockMask = new BitSet();
         BitSet emptySkyMask = new BitSet();
@@ -369,7 +364,7 @@ final class ChunkImpl implements Chunk {
                     Chunk neighborChunk = instance.getChunk(chunkX + i, chunkZ + j);
                     if (neighborChunk == null) continue;
                     ChunkImpl impl = (ChunkImpl) neighborChunk;
-                    if (impl.lighting) {
+                    if (impl.hasLightEngine()) {
                         impl.getOcclusionMap();
                         highestNeighborBlock = Math.max(highestNeighborBlock, impl.highestBlock);
                     }
@@ -503,7 +498,7 @@ final class ChunkImpl implements Chunk {
 
     // LIGHT
 
-    public void invalidateNeighborsSection(int coordinate) {
+    void invalidateNeighborsSection(int coordinate) {
         if (freezeInvalidation) return;
         for (int i = -1; i <= 1; i++) {
             for (int j = -1; j <= 1; j++) {
@@ -520,7 +515,7 @@ final class ChunkImpl implements Chunk {
         }
     }
 
-    public void invalidateResendDelay() {
+    void invalidateResendDelay() {
         if (!doneInit || freezeInvalidation) return;
         for (int i = -1; i <= 1; i++) {
             for (int j = -1; j <= 1; j++) {
@@ -531,7 +526,7 @@ final class ChunkImpl implements Chunk {
         }
     }
 
-    public int[] getOcclusionMap() {
+    int[] getOcclusionMap() {
         if (this.occlusionMap != null) return this.occlusionMap;
         final int minY = dimension.minY();
         int[] occlusionMap = new int[CHUNK_SIZE_X * CHUNK_SIZE_Z];
@@ -603,14 +598,13 @@ final class ChunkImpl implements Chunk {
                 Chunk neighborChunk = instance.getChunk(chunkX + i, chunkZ + j);
                 if (neighborChunk == null) continue;
                 ChunkImpl impl = (ChunkImpl) neighborChunk;
-                if (impl.lighting) {
-                    if (impl.doneInit) {
-                        impl.resendTimer.set(20);
-                        impl.invalidate();
-                        for (int section = minSection; section < maxSection; section++) {
-                            impl.getSection(section).blockLight().invalidate();
-                            impl.getSection(section).skyLight().invalidate();
-                        }
+                if (!impl.hasLightEngine()) continue;
+                if (impl.doneInit) {
+                    impl.resendTimer.set(20);
+                    impl.invalidate();
+                    for (int section = minSection; section < maxSection; section++) {
+                        impl.getSection(section).blockLight().invalidate();
+                        impl.getSection(section).skyLight().invalidate();
                     }
                 }
             }
