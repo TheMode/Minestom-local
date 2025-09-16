@@ -33,6 +33,9 @@ import net.minestom.server.instance.block.Block;
 import net.minestom.server.instance.block.BlockFace;
 import net.minestom.server.instance.block.BlockHandler;
 import net.minestom.server.instance.block.predicate.BlockPredicate;
+import net.minestom.server.instance.painter.Painter;
+import net.minestom.server.instance.painter.PerlinNoise;
+import net.minestom.server.instance.painter.WhiteNoise;
 import net.minestom.server.inventory.Inventory;
 import net.minestom.server.inventory.InventoryType;
 import net.minestom.server.inventory.PlayerInventory;
@@ -358,13 +361,39 @@ public class PlayerInit {
         InstanceManager instanceManager = MinecraftServer.getInstanceManager();
 
         InstanceContainer instanceContainer = instanceManager.createInstanceContainer();
-        instanceContainer.setGenerator(unit -> {
-            unit.modifier().fillHeight(0, 40, Block.STONE);
+        Painter painter = Painter.paint(world -> {
+            var heightmap = Painter.Area.column().height(PerlinNoise.heightmap(16, 64, 99999));
+            var tree = heightmap.rate(WhiteNoise.noise2d(0.01, 44));
+            var sectionFill = Painter.Area.section().rate(WhiteNoise.noise3d(0.01, 45));
 
-            if (unit.absoluteStart().blockY() < 40 && unit.absoluteEnd().blockY() > 40) {
-                unit.modifier().setBlock(unit.absoluteStart().blockX(), 40, unit.absoluteStart().blockZ(), Block.TORCH);
-            }
+            world.every(heightmap, (relWorld) -> {
+                relWorld.fill(Block.DIRT);
+                relWorld.setBlock(0, 0, 0, Block.GRASS_BLOCK);
+            });
+
+            world.every(tree, relWorld -> {
+                // leaves
+                double radius = 2.5;
+                int height = 4;
+                for (int x = (int) -radius; x <= radius; x++) {
+                    for (int y = (int) -radius; y <= radius; y++) {
+                        for (int z = (int) -radius; z <= radius; z++) {
+                            double dist = Math.sqrt(x * x + y * y + z * z);
+                            if (dist > radius) continue;
+                            relWorld.setBlock(x, y + height, z, Block.OAK_LEAVES);
+                        }
+                    }
+                }
+
+                // log
+                for (int i = 1; i < height; i++) {
+                    relWorld.setBlock(0, i, 0, Block.OAK_LOG);
+                }
+            });
+
+            world.every(sectionFill, relWorld -> relWorld.fill(Block.DIAMOND_BLOCK));
         });
+        instanceContainer.setGenerator(painter.asGenerator());
         instanceContainer.setChunkSupplier(LightingChunk::new);
         instanceContainer.setTimeRate(0);
         instanceContainer.setTime(12000);
