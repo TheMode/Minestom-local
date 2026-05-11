@@ -816,7 +816,12 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
         @Override
         public T read(NetworkBuffer buffer) {
             if (type == null) type = supplier.get();
-            return null;
+            return type.read(buffer);
+        }
+
+        Type<T> resolvedType() {
+            if (type == null) type = supplier.get();
+            return type;
         }
     }
 
