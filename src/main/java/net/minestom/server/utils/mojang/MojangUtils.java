@@ -9,9 +9,12 @@ import org.jetbrains.annotations.Blocking;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -27,6 +30,7 @@ public final class MojangUtils {
     // Auth
     private static final String BASE_AUTH_URL = ServerFlag.AUTH_URL.concat("?username=%s&serverId=%s");
     private static final String PREVENT_PROXY_CONNECTIONS_AUTH_URL = BASE_AUTH_URL.concat("&ip=%s");
+    private static final String JOIN_SESSION_URL = "https://sessionserver.mojang.com/session/minecraft/join";
 
     private static final Pattern USERNAME_PATTERN = Pattern.compile("[a-zA-Z0-9_]{3,16}");
 
@@ -138,6 +142,39 @@ public final class MojangUtils {
             throw new IOException("Invalid username: " + username);
         }
         return username;
+    }
+
+    /**
+     * Client-side counterpart to {@link #authenticateSession}: announces to Mojang that the
+     * holder of {@code accessToken} is about to join a server with the given {@code serverId}
+     * hash. After this call returns, the server can call {@code hasJoined} for the same
+     * {@code serverId} and Mojang will return the player's profile.
+     *
+     * @param accessToken    the minecraftservices access_token (NOT the Microsoft token)
+     * @param selectedProfile the UUID associated with that access_token
+     * @param serverId       the SHA-1 hex hash of {@code serverId ‖ sharedSecret ‖ serverPubKey}
+     * @throws IOException on transport failure or a non-204 response
+     */
+    @Blocking
+    @ApiStatus.Internal
+    public static void joinSession(String accessToken, UUID selectedProfile, String serverId) throws IOException {
+        final String body = "{\"accessToken\":\"" + accessToken
+                + "\",\"selectedProfile\":\"" + selectedProfile.toString().replace("-", "")
+                + "\",\"serverId\":\"" + serverId + "\"}";
+        final HttpURLConnection conn = (HttpURLConnection) URI.create(JOIN_SESSION_URL).toURL().openConnection();
+        conn.setRequestMethod("POST");
+        conn.setConnectTimeout(15_000);
+        conn.setReadTimeout(30_000);
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setDoOutput(true);
+        final byte[] payload = body.getBytes(StandardCharsets.UTF_8);
+        conn.setFixedLengthStreamingMode(payload.length);
+        try (OutputStream out = conn.getOutputStream()) { out.write(payload); }
+        final int status = conn.getResponseCode();
+        // 204 is documented; some Mojang deployments return 200. Anything else is a failure.
+        if (status != 204 && status != 200) {
+            throw new IOException("session join failed (HTTP " + status + ")");
+        }
     }
 
     /**

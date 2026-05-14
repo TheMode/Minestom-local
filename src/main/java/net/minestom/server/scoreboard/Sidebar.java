@@ -574,7 +574,7 @@ public class Sidebar implements Scoreboard {
             );
         }
 
-        private enum FormatType {
+        public enum FormatType {
             BLANK, STYLED, FIXED
         }
     }

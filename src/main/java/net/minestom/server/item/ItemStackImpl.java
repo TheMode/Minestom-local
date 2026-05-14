@@ -10,6 +10,7 @@ import net.minestom.server.component.DataComponents;
 import net.minestom.server.item.component.CustomData;
 import net.minestom.server.item.component.TooltipDisplay;
 import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.registry.Registries;
 import net.minestom.server.registry.RegistryTranscoder;
 import net.minestom.server.tag.Tag;
 import org.jetbrains.annotations.Contract;
@@ -45,13 +46,22 @@ record ItemStackImpl(Material material, int amount, DataComponentMap components)
                 if (amount <= 0) return ItemStack.AIR;
                 final Material material = buffer.read(Material.NETWORK_TYPE);
                 final DataComponentMap components = buffer.read(componentPatchType);
-                return ItemStackImpl.create(material, amount, components);
+                return ItemStackImpl.create(material, amount, components, buffer.registries());
             }
         };
     }
 
     static ItemStack create(Material material, int amount, DataComponentMap components) {
         if (amount <= 0 || material == Material.AIR) return AIR;
+        return create(material, amount, components, null);
+    }
+
+    static ItemStack create(Material material, int amount, DataComponentMap components, @Nullable Registries registries) {
+        if (amount <= 0 || material == Material.AIR) return AIR;
+        if (components != DataComponentMap.EMPTY) {
+            final DataComponentMap prototype = registries == null ? material.prototype() : material.prototype(registries);
+            components = DataComponentMap.diff(prototype, components);
+        }
         return new ItemStackImpl(material, amount, components);
     }
 
@@ -61,19 +71,6 @@ record ItemStackImpl(Material material, int amount, DataComponentMap components)
 
     public ItemStackImpl {
         Objects.requireNonNull(material, "Material cannot be null");
-
-        // It is relevant to create the minimal diff of the prototype so that #isSimilar returns consistent
-        // results for ItemStacks which would resolve to the same thing. For example, consider two items
-        // (name indicating prototype, brackets showing the components given during construction):
-        // 1: apple[max_stack_size=64, custom_name=Hello]
-        // 2: apple[custom_name=Hello]
-        // After resolution the first set of components would turn into the second one because apple already has a
-        // max stack size of 64. If we did not do this, #isSimilar would return false for these two items because of
-        // their different patches.
-        // It is worth noting that the client would handle both cases perfectly fine.
-        if (components != DataComponentMap.EMPTY) {
-            components = DataComponentMap.diff(material.prototype(), components);
-        }
 
         // Having items with amount being 0 and material not being air kicks players
         if (amount == 0) material = Material.AIR;

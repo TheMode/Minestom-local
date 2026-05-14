@@ -51,3 +51,9 @@ GEMINI.md
 # JFR
 /.profileconfig.json
 
+
+# Web
+*.db
+*.db-shm
+*.db-wal
+/assets
