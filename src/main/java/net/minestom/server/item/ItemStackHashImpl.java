@@ -63,11 +63,6 @@ final class ItemStackHashImpl {
             Map<DataComponent<?>, Integer> addedComponents,
             Set<DataComponent<?>> removedComponents
     ) implements ItemStack.Hash {
-        @Override
-        public ItemStack asItemStack() {
-            return ItemStack.of(material, amount);
-        }
-
         private static final int MAX_COMPONENTS = 256;
         public static final NetworkBuffer.Type<Item> NETWORK_TYPE = NetworkBufferTemplate.template(
                 Material.NETWORK_TYPE, Item::material,

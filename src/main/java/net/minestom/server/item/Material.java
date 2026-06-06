@@ -10,7 +10,6 @@ import net.minestom.server.instance.block.Block;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.registry.Registry;
 import net.minestom.server.registry.RegistryData;
-import net.minestom.server.registry.Registries;
 import net.minestom.server.registry.StaticProtocolObject;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
@@ -49,10 +48,6 @@ public sealed interface Material extends StaticProtocolObject<Material>, Materia
 
     default DataComponentMap prototype() {
         return registry().prototype();
-    }
-
-    default DataComponentMap prototype(Registries registries) {
-        return registry().prototype(registries);
     }
 
     default boolean isArmor() {
