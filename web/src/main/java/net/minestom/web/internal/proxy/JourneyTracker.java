@@ -1,9 +1,9 @@
 package net.minestom.web.internal.proxy;
 
+import net.minestom.web.internal.Uuids;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -41,7 +41,7 @@ public final class JourneyTracker {
     /// Mint a one-shot transfer cookie. `journeyId` comes from the caller (typically
     /// `session.journeyId()`) so two concurrent moves for the same player can't diverge.
     /// Returns the pending record — the 16-byte payload that goes on the wire is
-    /// `cookieBytes(pending.cookieId())`.
+    /// `Uuids.toBytes(pending.cookieId())`.
     public Pending mintTransfer(UUID playerUuid, UUID journeyId,
                                 @Nullable InetSocketAddress from, InetSocketAddress target) {
         Objects.requireNonNull(playerUuid, "playerUuid");
@@ -60,37 +60,23 @@ public final class JourneyTracker {
     /// to a known cookie or the cookie expired.
     public @Nullable Pending consume(byte @Nullable [] cookieBytes) {
         if (cookieBytes == null || cookieBytes.length != 16) return null;
-        final UUID id;
-        try {
-            final ByteBuffer buf = ByteBuffer.wrap(cookieBytes);
-            id = new UUID(buf.getLong(), buf.getLong());
-        } catch (RuntimeException _) {
-            return null;
-        }
+        final UUID id = Uuids.fromBytes(cookieBytes);
         final Pending pending = pendingByCookie.remove(id);
         if (pending == null) return null;
         if (System.currentTimeMillis() - pending.mintedAt() > PENDING_TTL_MS) return null;
         return pending;
     }
 
-    /// Stamp a player as currently assigned to `address` on `journeyId`. Called when a new
-    /// connection (LOGIN or post-TRANSFER) finishes login and is about to flow PLAY traffic.
-    public void recordAssignment(UUID playerUuid, UUID journeyId, InetSocketAddress address) {
-        if (playerUuid == null || journeyId == null || address == null) return;
+    /// Stamp a player as currently assigned to `address`. Called when a new connection (LOGIN or
+    /// post-TRANSFER) finishes login and is about to flow PLAY traffic.
+    public void recordAssignment(UUID playerUuid, InetSocketAddress address) {
+        if (playerUuid == null || address == null) return;
         assignmentsByPlayer.put(playerUuid, new Assignment(address));
     }
 
     /// The currently assigned backend for a player, or `null` if no journey is on file.
     public @Nullable Assignment current(UUID playerUuid) {
         return playerUuid == null ? null : assignmentsByPlayer.get(playerUuid);
-    }
-
-    /// Encode a cookie id as the 16-byte payload that goes on the wire.
-    public static byte[] cookieBytes(UUID id) {
-        final ByteBuffer buf = ByteBuffer.allocate(16);
-        buf.putLong(id.getMostSignificantBits());
-        buf.putLong(id.getLeastSignificantBits());
-        return buf.array();
     }
 
     private void sweepStale() {

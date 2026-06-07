@@ -91,17 +91,12 @@ public final class MiscRoutes {
         // CookieStore + Transfer. 404 if the player isn't online, 400 if the address spec is
         // invalid. Body shape: {"address": "play.example.com"} or {"address": "host:port"}.
         app.post("/api/players/{uuid}/move", liveOnly((ctx, scope) -> {
-            final UUID uuid;
-            try { uuid = UUID.fromString(ctx.pathParam("uuid")); }
-            catch (IllegalArgumentException e) { badRequest(ctx, e); return; }
-            final com.google.gson.JsonObject body = parseJsonBody(ctx);
-            if (!body.has("address") || body.get("address").isJsonNull()) {
-                badRequest(ctx, new IllegalArgumentException("address required"));
-                return;
-            }
-            final InetSocketAddress target;
-            try { target = AddressResolver.parseMinecraft(body.get("address").getAsString()); }
-            catch (IllegalArgumentException e) { badRequest(ctx, e); return; }
+            final UUID uuid = pathUuid(ctx, "uuid");
+            if (uuid == null) return;
+            final String address = requiredString(ctx, parseJsonBody(ctx), "address");
+            if (address == null) return;
+            // A malformed address spec throws IllegalArgumentException → mapped to 400.
+            final InetSocketAddress target = AddressResolver.parseMinecraft(address);
             if (!scope.proxy.movePlayer(uuid, target)) {
                 notFound(ctx, "no live connection or move rejected");
                 return;

@@ -14,10 +14,10 @@ import java.util.UUID;
 /// token.
 ///
 /// `profileUuid` and `profileName` describe the bot and **must be non-null** by the time the
-/// proxy uses this record. They may be left `null` here for convenience; callers can resolve
-/// them via [net.minestom.web.cli.MicrosoftAuth#fetchProfile] (the `--login` CLI flow and the bundled `Main` do
-/// this automatically at startup). Providing them explicitly also lets the proxy start
-/// without Mojang reachability.
+/// proxy uses this record. They may be left `null` here for convenience; resolve them yourself
+/// from the access token (e.g. `GET https://api.minecraftservices.com/minecraft/profile`), or
+/// let the bundled CLI's `--login` flow fill them in at startup. Providing them explicitly also
+/// lets the proxy start without Mojang reachability.
 public record MojangAuth(
         String accessToken,
         @Nullable UUID profileUuid,

@@ -14,8 +14,6 @@
         prevSameClass?: PacketRow | null;
         prevRecord?: Record<string, unknown> | null;
         related?: Related[];
-        multi?: Set<number>;
-        getRow?: (seq: number) => PacketRow | null;
         isBookmarked?: boolean;
         onClose?: () => void;
         onJumpSeq?: (seq: number) => void;
@@ -32,8 +30,6 @@
         prevSameClass = null,
         prevRecord = null,
         related = [],
-        multi = new Set<number>(),
-        getRow = () => null,
         isBookmarked = false,
         onClose = () => {},
         onJumpSeq = () => {},
@@ -48,17 +44,8 @@
     const full = $derived(record?.full as { record?: Record<string, unknown> } | undefined);
     const rec = $derived(full?.record ?? null);
 
-    // Multi-selection forces diff against the *other* selected packet, else compare to prev same-class.
-    const diffPrev = $derived.by(() => {
-        if (!row) return null;
-        if (multi.size === 2) {
-            const arr = [...multi].sort((a, b) => a - b);
-            const a = getRow(arr[0]);
-            const b = getRow(arr[1]);
-            if (a && b) return a.seq === row.seq ? b : a;
-        }
-        return prevSameClass;
-    });
+    // Diff the selected packet against the previous same-class packet in the buffer.
+    const diffPrev = $derived(row ? prevSameClass : null);
 
     function diffRecords(prev: unknown, cur: unknown): { k: string; a: unknown; b: unknown; changed: boolean }[] {
         const p = (prev || {}) as Record<string, unknown>;
@@ -73,10 +60,8 @@
     }
 
     const highlightKeys = $derived.by(() => {
-        if (!diffPrev || !rec) return null;
-        const prev = (diffPrev === prevSameClass ? prevRecord : null) || null;
-        if (!prev) return null;
-        return new Set(diffRecords(prev, rec).filter(r => r.changed).map(r => r.k));
+        if (!diffPrev || !rec || !prevRecord) return null;
+        return new Set(diffRecords(prevRecord, rec).filter(r => r.changed).map(r => r.k));
     });
 
     const tabs = $derived([
@@ -161,7 +146,7 @@
                 Select a packet to inspect.<br /><br />
                 <div class="pt-insp__empty-steps">
                     <div>· click any row to open</div>
-                    <div>· shift-click to multi-select / diff</div>
+                    <div>· shift-click to multi-select</div>
                     <div>· right-click for context actions</div>
                     <div>· press <kbd>B</kbd> to bookmark playhead</div>
                 </div>

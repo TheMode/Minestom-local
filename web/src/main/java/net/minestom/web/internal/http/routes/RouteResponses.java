@@ -66,8 +66,16 @@ public final class RouteResponses {
         return scoped((ctx, scope) -> {
             Session session = lookupLive(ctx, scope);
             if (session == null) return;
-            json(ctx, session.readState(extractor::apply));
+            json(ctx, httpRead(session, extractor));
         });
+    }
+
+    /// Read player state on its owner thread, bounded by the shared HTTP timeout. A wedged or
+    /// slow owner surfaces as a 503/504 (`MailboxException`, mapped in DashboardServer) rather
+    /// than pinning the request thread on an unbounded wait. Request handlers must use this in
+    /// preference to the unbounded `Session#readState`.
+    public static <T> T httpRead(Session session, Function<PlayerState, T> body) {
+        return session.tryReadState(body, Session.HTTP_READ_TIMEOUT_MS);
     }
 
     // ---- JSON helpers --------------------------------------------------------------------
@@ -165,6 +173,12 @@ public final class RouteResponses {
         }
     }
 
+    /// Parse the `limit` query param, clamped to [1, max] so a caller can't force an unbounded read.
+    public static int parseLimit(Context ctx, int def, int max) {
+        final long raw = parseLong(ctx.queryParam("limit"), def);
+        return (int) Math.clamp(raw, 1, max);
+    }
+
     /// Parse a path param as long; on failure sets 400 status and returns null.
     public static @Nullable Long pathLong(Context ctx, String name) {
         try {
@@ -203,7 +217,47 @@ public final class RouteResponses {
     }
 
     public static JsonObject parseJsonBody(Context ctx) {
-        return JsonParser.parseString(ctx.body()).getAsJsonObject();
+        final var el = JsonParser.parseString(ctx.body());
+        if (!el.isJsonObject()) throw new IllegalArgumentException("expected a JSON object body");
+        return el.getAsJsonObject();
+    }
+
+    // ---- Body-field helpers: 400 + null on missing/invalid (mirrors pathUuid's contract) -----
+
+    /// Required string field that may be empty (e.g. a match-all query). 400 + null when the
+    /// field is absent, null, or not a string.
+    public static @Nullable String stringField(Context ctx, JsonObject body, String field) {
+        final var el = body.get(field);
+        if (el != null && el.isJsonPrimitive() && el.getAsJsonPrimitive().isString()) return el.getAsString();
+        ctx.status(400).result("missing or invalid '" + field + "'");
+        return null;
+    }
+
+    /// Required, non-blank string field. 400 + null when absent, null, not a string, or blank.
+    public static @Nullable String requiredString(Context ctx, JsonObject body, String field) {
+        final String v = stringField(ctx, body, field);
+        if (v != null && v.isBlank()) {
+            ctx.status(400).result("'" + field + "' must not be blank");
+            return null;
+        }
+        return v;
+    }
+
+    /// Required boolean field. 400 + null (not `false`!) when absent or not a boolean — callers
+    /// must null-check before unboxing.
+    public static @Nullable Boolean requiredBoolean(Context ctx, JsonObject body, String field) {
+        final var el = body.get(field);
+        if (el != null && el.isJsonPrimitive() && el.getAsJsonPrimitive().isBoolean()) return el.getAsBoolean();
+        ctx.status(400).result("missing or invalid '" + field + "'");
+        return null;
+    }
+
+    /// Required nested object field. 400 + null when absent or not an object.
+    public static @Nullable JsonObject requiredObject(Context ctx, JsonObject body, String field) {
+        final var el = body.get(field);
+        if (el != null && el.isJsonObject()) return el.getAsJsonObject();
+        ctx.status(400).result("missing or invalid '" + field + "'");
+        return null;
     }
 
     public static @Nullable String queryOrHeader(Context ctx, String queryName, String headerName) {

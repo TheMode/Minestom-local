@@ -12,11 +12,7 @@ final class IconResourceIds {
 
     /// Strip `minecraft:` and a leading `block/` or `item/` segment off a texture reference.
     static @Nullable String bareTexture(String raw) {
-        String s = raw;
-        if (s.startsWith("minecraft:")) s = s.substring("minecraft:".length());
-        if (s.startsWith("block/")) s = s.substring("block/".length());
-        if (s.startsWith("item/")) s = s.substring("item/".length());
-        return s.isEmpty() ? null : s;
+        return strip(raw, "block/", "item/");
     }
 
     /// Strip the `minecraft:` namespace off an id, leaving any path prefix intact.
@@ -25,11 +21,15 @@ final class IconResourceIds {
         return raw.startsWith("minecraft:") ? raw.substring("minecraft:".length()) : raw;
     }
 
-    /// Strip `minecraft:` and a leading `block/` segment off a model id.
+    /// Strip `minecraft:` and a leading `block/` segment off a model id (model paths keep `item/`).
     static @Nullable String modelPath(String id) {
-        String s = id;
-        if (s.startsWith("minecraft:")) s = s.substring("minecraft:".length());
-        if (s.startsWith("block/")) s = s.substring("block/".length());
+        return strip(id, "block/");
+    }
+
+    /// Strip the `minecraft:` namespace, then each of `prefixes` (in order) once if present.
+    private static @Nullable String strip(String raw, String... prefixes) {
+        String s = raw.startsWith("minecraft:") ? raw.substring("minecraft:".length()) : raw;
+        for (String prefix : prefixes) if (s.startsWith(prefix)) s = s.substring(prefix.length());
         return s.isEmpty() ? null : s;
     }
 

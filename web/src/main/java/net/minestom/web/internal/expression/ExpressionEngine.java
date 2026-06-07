@@ -6,6 +6,7 @@ import net.minestom.web.PlayerState;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -42,8 +43,15 @@ public final class ExpressionEngine {
     );
 
     private static final Map<String, FieldDef> FIELDS_BY_NAME = fieldsByName();
+    /// Cap so the editor's per-keystroke `/api/expression/compile` validations can't grow the
+    /// cache without bound; the bounded set of routine/action sources fits comfortably below it.
+    private static final int COMPILE_CACHE_MAX = 1024;
 
     private final ControlBridge control;
+    /// Compiled-AST cache. The AST is immutable and resolves fields against this engine at
+    /// eval time, so one compile is reusable across every PlayerState — routine/action sources
+    /// otherwise re-tokenize + re-parse on every fire.
+    private final Map<String, Expr> compileCache = new ConcurrentHashMap<>();
 
     public ExpressionEngine(ControlBridge control) { this.control = control; }
 
@@ -57,10 +65,13 @@ public final class ExpressionEngine {
     }
 
     public Expr compile(String src) {
-        ValueParser p = newParser(src);
-        Expr ast = p.parseExpr();
+        final Expr cached = compileCache.get(src);
+        if (cached != null) return cached;
+        final ValueParser p = newParser(src);
+        final Expr ast = p.parseExpr();
         if (p.peek().kind() != Lexer.Kind.EOF)
             throw new IllegalArgumentException("Trailing tokens at " + p.peek());
+        if (compileCache.size() < COMPILE_CACHE_MAX) compileCache.putIfAbsent(src, ast);
         return ast;
     }
 

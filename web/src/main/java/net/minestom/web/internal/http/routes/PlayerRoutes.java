@@ -34,9 +34,9 @@ public final class PlayerRoutes {
             if (session == null) return;
             Integer eid = pathInt(ctx, "eid");
             if (eid == null) return;
-            var snap = session.readState(player -> WebJsonBuilders.visibleEntityJson(player, eid));
+            var snap = httpRead(session, player -> WebJsonBuilders.visibleEntityJson(player, eid));
             if (snap == null) { notFound(ctx, "not visible"); return; }
-            int limit = (int) parseLong(ctx.queryParam("limit"), 200);
+            int limit = parseLimit(ctx, 200, 5_000);
             var packets = scope.packetEvents(session, 0, limit, null, null, "ent." + eid);
             snap.add("packets", WebJson.encode(WebCodecs.PACKET_EVENT_LIST, packets));
             json(ctx, snap);
@@ -56,7 +56,7 @@ public final class PlayerRoutes {
                 return;
             }
             Session session = ((PlayerView.Live) player).session();
-            json(ctx, session.readState(state -> WebJsonBuilders.provenanceHistoryJson(state, ctx.queryParam("field"))));
+            json(ctx, httpRead(session, state -> WebJsonBuilders.provenanceHistoryJson(state, ctx.queryParam("field"))));
         }));
 
         app.get("/api/players/{uuid}/lifecycle", scoped((ctx, scope) -> {

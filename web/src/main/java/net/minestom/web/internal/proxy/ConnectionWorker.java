@@ -26,6 +26,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /// One VT per connection: selector + sockets + ciphers + the [Session]'s owner-thread mutations
 /// and cadence ticks. Decoded packets apply to state on the same iteration they were read.
@@ -46,6 +47,11 @@ public final class ConnectionWorker implements Runnable {
     private final ThrottleManager throttles;
     private final ThrottleManager.WorkerState cbThrottle = new ThrottleManager.WorkerState();
     private final ThrottleManager.WorkerState sbThrottle = new ThrottleManager.WorkerState();
+    /// Frames deferred (throttled) but not yet written, per direction. While > 0, a same-direction
+    /// frame must NOT be encrypted+written inline — that would advance the stateful AES-CFB8 cipher
+    /// ahead of the still-pending frames and desync the receiver. See [#encryptAndDispatch].
+    private final AtomicInteger cbPendingDeferred = new AtomicInteger();
+    private final AtomicInteger sbPendingDeferred = new AtomicInteger();
     private final @Nullable PersistentHistory persistence;
     private final ProxyMetrics.Live metrics;
     private long ioSeq;
@@ -97,7 +103,9 @@ public final class ConnectionWorker implements Runnable {
     }
 
     public boolean inject(Direction direction, Packet packet) {
-        if (!tasks.offer(() -> writeInjected(direction, packet))) {
+        // Honest contract: a closed/closing worker (run() already past its isOpen() loop) would
+        // never drain the task, so report the drop rather than a phantom success to movePlayer.
+        if (!isOpen() || !tasks.offer(() -> writeInjected(direction, packet))) {
             metrics.injectDropped().increment();
             return false;
         }
@@ -260,21 +268,26 @@ public final class ConnectionWorker implements Runnable {
     private boolean encryptAndDispatch(Direction direction, SocketChannel sink, int frameBytes) {
         final var throttle = direction == Direction.CLIENTBOUND ? cbThrottle : sbThrottle;
         final long delayNanos = throttles.delayFor(throttle, session.playerUuid(), direction, frameBytes);
-        if (delayNanos == 0L) {
+        final AtomicInteger pending = pendingDeferred(direction);
+        // AES-CFB8 is stateful — frames on a direction must be encrypted in submission order.
+        // Encrypt+write inline ONLY when nothing is delayed AND no earlier frame on this direction
+        // is still pending. Otherwise defer: encrypting inline now would advance the cipher ahead
+        // of the pending frame(s) and corrupt the receiver's decrypt stream. The shared
+        // single-threaded DELAY executor then releases all deferred frames in submission order
+        // (frames scheduled for the same instant run in submission order), so this invariant holds
+        // locally regardless of ThrottleManager.delayFor's internal scheduling.
+        if (delayNanos == 0L && pending.get() == 0) {
             var cipher = writeCipher(direction);
             PacketDecoder.encryptInPlace(writeBuffer, cipher == null ? null : cipher.encrypt());
             return writeFully(sink, writeBuffer, direction);
         }
-        // AES-CFB8 is stateful — cipher state must advance in wire-write order. Copy plain bytes
-        // and defer encryption to writeDelayed (drained on this same worker thread), otherwise a
-        // later delay=0 packet's encryption would advance the cipher while its bytes jump ahead
-        // of this still-pending frame, corrupting the receiver's decrypt stream.
         final byte[] frame = new byte[frameBytes];
         writeBuffer.copyTo(0L, frame, 0L, frameBytes);
+        pending.incrementAndGet();
         ThrottleManager.schedule(delayNanos, () -> {
-            if (!isOpen()) return;
+            if (!isOpen()) { pending.decrementAndGet(); return; }
             if (tasks.offer(() -> writeDelayed(sink, frame, direction))) selector.wakeup();
-            else metrics.injectDropped().increment();
+            else { pending.decrementAndGet(); metrics.injectDropped().increment(); }
         });
         return true;
     }
@@ -293,6 +306,12 @@ public final class ConnectionWorker implements Runnable {
         }
     }
 
+    /// Blocking, level-triggered write of all of `buffer` to `sink`. When the kernel send buffer
+    /// fills this parks the worker (cheap on a virtual thread) until `sink` is writable again —
+    /// intentionally pausing this connection's other-direction reads, inject queue, and cadence
+    /// ticks for the duration. That backpressure is per-connection only: a slow peer can stall its
+    /// own session but not the server. Non-sink ready keys are dropped here but not lost — the
+    /// selector is level-triggered, so they re-select on the next outer loop.
     private void flushToSink(SocketChannel sink, NetworkBuffer buffer) throws IOException {
         final var key = sink.keyFor(selector);
         if (key == null) throw new IOException("channel not registered");
@@ -317,11 +336,15 @@ public final class ConnectionWorker implements Runnable {
     }
 
     private void writeDelayed(SocketChannel sink, byte[] frame, Direction direction) {
-        if (!isOpen()) return;
-        final var buffer = NetworkBuffer.wrap(frame, 0, frame.length, session.registries);
-        var cipher = writeCipher(direction);
-        PacketDecoder.encryptInPlace(buffer, cipher == null ? null : cipher.encrypt());
-        if (!writeFully(sink, buffer, direction)) close();
+        try {
+            if (!isOpen()) return;
+            final var buffer = NetworkBuffer.wrap(frame, 0, frame.length, session.registries);
+            var cipher = writeCipher(direction);
+            PacketDecoder.encryptInPlace(buffer, cipher == null ? null : cipher.encrypt());
+            if (!writeFully(sink, buffer, direction)) close();
+        } finally {
+            pendingDeferred(direction).decrementAndGet();
+        }
     }
 
     private void writeInjected(Direction direction, Packet packet) {
@@ -358,6 +381,10 @@ public final class ConnectionWorker implements Runnable {
 
     private @Nullable PacketDecoder.EncryptionContext writeCipher(Direction direction) {
         return direction == Direction.CLIENTBOUND ? clientCipher : upstreamCipher;
+    }
+
+    private AtomicInteger pendingDeferred(Direction direction) {
+        return direction == Direction.CLIENTBOUND ? cbPendingDeferred : sbPendingDeferred;
     }
 
     private boolean shouldForward(Packet packet) {

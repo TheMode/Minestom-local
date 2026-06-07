@@ -5,6 +5,10 @@ import net.minestom.server.codec.StructCodec;
 
 import java.util.concurrent.atomic.LongAdder;
 
+/// Proxy lifecycle counters. Inject failures are split by stage: [#injectRejected] counts
+/// requests the acceptor couldn't route to a worker at all (no live session / worker for the
+/// player); [#injectDropped] counts requests that reached a worker but were lost there (worker
+/// closing, task queue full, or a deferred throttled frame that couldn't be re-queued).
 public record ProxyMetrics(
         long connectionsAccepted,
         long loginFailures,

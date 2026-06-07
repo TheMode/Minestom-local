@@ -30,7 +30,7 @@ public final class PacketRoutes {
             Session session = lookupSession(ctx, scope);
             if (session == null) return;
             long since = parseLong(ctx.queryParam("since"), 0L);
-            int limit = (int) parseLong(ctx.queryParam("limit"), 200);
+            int limit = parseLimit(ctx, 200, 5_000);
             var recs = scope.packetEvents(session, since, limit,
                     parseDirection(ctx.queryParam("dir")), ctx.queryParam("class"), ctx.queryParam("subject"));
             encoded(ctx, WebCodecs.PACKET_EVENT_LIST, recs);
@@ -39,7 +39,7 @@ public final class PacketRoutes {
         app.get("/api/connections/{id}/packets/subjects", scoped((ctx, scope) -> {
             Session session = lookupSession(ctx, scope);
             if (session == null) return;
-            int limit = (int) parseLong(ctx.queryParam("limit"), 5000);
+            int limit = parseLimit(ctx, 5_000, 50_000);
             var recs = scope.packetEvents(session, 0, limit, null, null, null);
             long now = System.currentTimeMillis();
             Map<String, Integer> recent = new HashMap<>();

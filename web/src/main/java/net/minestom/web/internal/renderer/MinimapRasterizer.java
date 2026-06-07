@@ -21,21 +21,11 @@ public final class MinimapRasterizer {
             for (int x = 0; x < TILE; x++) {
                 final int idx = (z << 4) | x;
                 final int o = idx * 4;
-                final short h = heights[idx];
-                if (h == UNKNOWN) {
-                    out[o] = 16;
-                    out[o + 1] = 20;
-                    out[o + 2] = 24;
-                    out[o + 3] = (byte) 255;
-                    continue;
-                }
-                final int packed = colors == null || colors[idx] == UNKNOWN_COLOR ? BlockColors.UNKNOWN : colors[idx];
-                final int r = (packed >> 16) & 0xFF;
-                final int g = (packed >> 8) & 0xFF;
-                final int b = packed & 0xFF;
-                out[o] = (byte) r;
-                out[o + 1] = (byte) g;
-                out[o + 2] = (byte) b;
+                final int packed = heights[idx] == UNKNOWN ? BlockColors.VOID
+                        : (colors == null || colors[idx] == UNKNOWN_COLOR ? BlockColors.UNKNOWN : colors[idx]);
+                out[o] = (byte) ((packed >> 16) & 0xFF);
+                out[o + 1] = (byte) ((packed >> 8) & 0xFF);
+                out[o + 2] = (byte) (packed & 0xFF);
                 out[o + 3] = (byte) 255;
             }
         }

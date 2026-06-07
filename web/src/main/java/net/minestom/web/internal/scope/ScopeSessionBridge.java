@@ -111,26 +111,23 @@ public final class ScopeSessionBridge {
         if (ev.playerUuid() == null) return;
         if (joinedSessions.add(session.id)) {
             // First time we know who this connection belongs to — back-fill the journey row's
-            // player_uuid so SELECT … WHERE player_uuid = ? can find every connection on the
-            // player's journey.
+            // player_uuid. The :web module never queries it; the column + idx_journey_player exist
+            // for external/archive consumers that want every connection on a player's journey.
             if (scope.persistence != null && session.journeyId() != null) {
                 scope.persistence.recordJourneyPlayerUuid(session.journeyId(), ev.playerUuid());
             }
             publishPlayers("add", session);
         }
-        if (timelineEvent != null && scope.hasSubscriber(Topics.PACKETS_AGGREGATE)) {
-            scope.notePacketAggregate(buildPlayerEvent(ev, timelineEvent));
-        }
-        pushPacketEvent(ev, timelineEvent);
-    }
-
-    private void pushPacketEvent(SessionEvent.PacketSeen ev, PacketEvent timelineEvent) {
         if (timelineEvent == null) return;
-        final UUID uuid = ev.playerUuid();
-        if (uuid == null) return;
-        final String topic = Topics.playerPackets(uuid);
-        if (!scope.hasSubscriber(topic)) return;
-        scope.publish(topic, WebJson.encodeAsObject(WebCodecs.PLAYER_PACKET_EVENT, buildPlayerEvent(ev, timelineEvent)));
+        // Build the wire event at most once, even when both the aggregate and per-player topics
+        // are subscribed.
+        final String packetsTopic = Topics.playerPackets(ev.playerUuid());
+        final boolean aggregateWanted = scope.hasSubscriber(Topics.PACKETS_AGGREGATE);
+        final boolean perPlayerWanted = scope.hasSubscriber(packetsTopic);
+        if (!aggregateWanted && !perPlayerWanted) return;
+        final WebPayloads.PlayerPacketEvent event = buildPlayerEvent(ev, timelineEvent);
+        if (aggregateWanted) scope.notePacketAggregate(event);
+        if (perPlayerWanted) scope.publish(packetsTopic, WebJson.encodeAsObject(WebCodecs.PLAYER_PACKET_EVENT, event));
     }
 
     private void handlePatch(Session session, SessionEvent.Patch ev) {

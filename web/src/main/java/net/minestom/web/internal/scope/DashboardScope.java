@@ -1,6 +1,5 @@
 package net.minestom.web.internal.scope;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import io.javalin.websocket.WsContext;
 import net.minestom.web.ControlBridge;
@@ -216,21 +215,15 @@ public final class DashboardScope implements AutoCloseable {
         return count != null && count.sum() > 0;
     }
 
-    /// Fan a message out to every subscriber of `topic` in this scope. No-op when nobody is
-    /// listening so the caller can avoid building the payload (also gated upstream).
-    public void broadcast(String topic, JsonElement message) {
-        if (!hasSubscriber(topic)) return;
-        final String body = message.toString();
-        for (Subscriber sub : subscribers.values()) {
-            if (sub.topics.contains(topic)) sub.enqueue(body);
-        }
-    }
-
-    /// Stamp `topic` onto the payload and broadcast. No-op if nobody is listening.
+    /// Stamp `topic` onto the payload and fan it out to every subscriber of `topic`. No-op when
+    /// nobody is listening (callers also gate on [#hasSubscriber] to skip building the payload).
     public void publish(String topic, JsonObject payload) {
         if (!hasSubscriber(topic)) return;
         payload.addProperty("topic", topic);
-        broadcast(topic, payload);
+        final String body = payload.toString();
+        for (Subscriber sub : subscribers.values()) {
+            if (sub.topics.contains(topic)) sub.enqueue(body);
+        }
     }
 
     public void notePacketAggregate(WebPayloads.PlayerPacketEvent event) {
@@ -259,8 +252,14 @@ public final class DashboardScope implements AutoCloseable {
 
     public void publishPlayersSummary() {
         if (!hasSubscriber(Topics.PLAYERS_SUMMARY) || pendingSummary.isEmpty()) return;
-        final List<WebPayloads.PlayersSummaryRow> rows = new ArrayList<>(pendingSummary.values());
-        pendingSummary.clear();
+        // Drain per-key with remove-if-same so a row written between read and clear isn't lost:
+        // a newer value for the same UUID fails the CAS, stays in the map, and ships next tick.
+        final List<WebPayloads.PlayersSummaryRow> rows = new ArrayList<>();
+        for (Map.Entry<UUID, WebPayloads.PlayersSummaryRow> e : pendingSummary.entrySet()) {
+            final WebPayloads.PlayersSummaryRow row = e.getValue();
+            if (pendingSummary.remove(e.getKey(), row)) rows.add(row);
+        }
+        if (rows.isEmpty()) return;
         publish(Topics.PLAYERS_SUMMARY,
                 WebJson.encodeAsObject(WebCodecs.PLAYERS_SUMMARY, new WebPayloads.PlayersSummaryPayload(rows)));
     }
@@ -341,11 +340,14 @@ public final class DashboardScope implements AutoCloseable {
                     if (batch.size() == 1) {
                         ctx.send(batch.getFirst());
                     } else {
-                        com.google.gson.JsonArray arr = new com.google.gson.JsonArray(batch.size());
-                        for (String body : batch) arr.add(com.google.gson.JsonParser.parseString(body));
-                        com.google.gson.JsonObject wrap = new com.google.gson.JsonObject();
-                        wrap.add("batch", arr);
-                        ctx.send(wrap.toString());
+                        // Each body is already a complete JSON object string — concatenate into the
+                        // batch array directly instead of parsing + re-serializing every message.
+                        final StringBuilder sb = new StringBuilder(batch.size() * 64).append("{\"batch\":[");
+                        for (int i = 0; i < batch.size(); i++) {
+                            if (i > 0) sb.append(',');
+                            sb.append(batch.get(i));
+                        }
+                        ctx.send(sb.append("]}").toString());
                     }
                 } catch (Exception _) { alive = false; }
             }

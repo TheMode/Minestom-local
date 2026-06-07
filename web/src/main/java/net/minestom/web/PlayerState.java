@@ -130,8 +130,9 @@ public final class PlayerState {
 
     /// The provenance of the packet currently being applied. Set by
     /// [net.minestom.web.internal.state.StateApplier] before each dispatch; updaters read it via
-    /// [#set] and need not touch it directly. Not serialized.
-    public transient Provenance currentProvenance;
+    /// [#set] and need not touch it directly. Transient working state — never part of the JSON
+    /// snapshot the dashboard emits.
+    public Provenance currentProvenance;
 
     /// Per-field provenance: `"health"` → packet that last set health. Cleared only on session
     /// start. Serialised as a flat `{ field: {...} }` map under the profile snapshot.

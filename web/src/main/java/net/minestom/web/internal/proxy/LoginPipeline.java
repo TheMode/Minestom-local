@@ -343,6 +343,11 @@ public final class LoginPipeline {
 
     private static GameProfile profileFromHasJoined(String username, String serverId, SocketAddress clientAddress) throws IOException {
         final var json = MojangUtils.authenticateSession(username, serverId, clientAddress);
+        // A 200 with an unexpected shape would NPE here and surface as a generic setup failure;
+        // turn it into a clean login failure instead so it lands in the loginFailures() metric.
+        if (json == null || !json.has("id") || !json.has("name") || !json.has("properties")) {
+            throw new IOException("malformed hasJoined response for " + username);
+        }
         final UUID uuid = UUID.fromString(json.get("id").getAsString()
                 .replaceFirst("(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})", "$1-$2-$3-$4-$5"));
         final String name = json.get("name").getAsString();

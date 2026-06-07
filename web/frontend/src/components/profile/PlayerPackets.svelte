@@ -259,15 +259,6 @@
             align-self: center;
             canvas { width: 100%; height: 100%; display: block; }
         }
-
-        .ppk-state-mirror__composite { padding: var(--pad-2) var(--pad-3); border-bottom: 1px solid var(--line); }
-
-        .ppk-state-mirror__label {
-            font-size: var(--t-xs);
-            color: var(--ink-4);
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
     }
 
     @keyframes ppk-flash {
@@ -276,121 +267,6 @@
         100% { background: transparent; }
     }
 
-    .ppk-vitals {
-        display: grid;
-        gap: 1px;
-        background: var(--line);
-        .ppk-vitals__row {
-            display: grid;
-            grid-template-columns: 50px 1fr 1fr;
-            align-items: center;
-            gap: var(--pad-2);
-            padding: 6px var(--pad-3);
-            background: var(--bg-1);
-            &.flashed { animation: ppk-flash 700ms ease-out; }
-        }
-
-        .ppk-vitals__lbl {
-            font-size: var(--t-xs);
-            color: var(--ink-4);
-            text-transform: uppercase;
-        }
-        .ppk-vitals__val {
-            font-size: var(--t-md);
-            color: var(--ink);
-            font-variant-numeric: tabular-nums;
-            &.acc    { color: var(--acc); }
-            &.warn   { color: var(--warn); }
-            &.danger { color: var(--danger); }
-        }
-        .ppk-vitals__spark {
-            height: 18px;
-            min-width: 0;
-            display: block;
-            canvas { width: 100%; height: 100%; display: block; }
-        }
-    }
-
-    .ppk-hotbar {
-        display: grid;
-        grid-template-columns: repeat(9, 1fr);
-        gap: 2px;
-        padding: var(--pad-3);
-        .ppk-hotbar__slot {
-            aspect-ratio: 1;
-            display: grid;
-            place-items: center;
-            background: var(--bg-2);
-            border: 1px solid var(--line);
-            color: var(--ink-3);
-            font-size: var(--t-xs);
-            position: relative;
-            overflow: hidden;
-            &.selected { border-color: var(--acc); box-shadow: 0 0 0 1px var(--acc) inset; }
-            &.flashed { animation: ppk-flash 700ms ease-out; }
-
-            .lbl {
-                text-align: center;
-                color: var(--ink-2);
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-            .count {
-                position: absolute;
-                right: 2px;
-                bottom: 1px;
-                font-size: var(--t-xs);
-                color: var(--acc);
-            }
-        }
-    }
-
-    .ppk-scope {
-        position: relative;
-        aspect-ratio: 1;
-        background: var(--sunk);
-        box-shadow: var(--bevel-sunk);
-        overflow: hidden;
-        .ppk-scope__grid {
-            position: absolute;
-            inset: 0;
-            background:
-                linear-gradient(to right,  color-mix(in oklab, var(--acc) 8%, transparent) 1px, transparent 1px),
-                linear-gradient(to bottom, color-mix(in oklab, var(--acc) 8%, transparent) 1px, transparent 1px);
-            background-size: 25% 25%;
-        }
-        .ppk-scope__trail {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            svg { width: 100%; height: 100%; display: block; }
-        }
-        .ppk-scope__player {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: var(--acc);
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 8px var(--acc);
-        }
-        .ppk-scope__north {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            color: var(--ink-4);
-            font-size: var(--t-xs);
-        }
-        .ppk-scope__coord {
-            position: absolute;
-            bottom: 4px;
-            left: 4px;
-            color: var(--ink-3);
-            font-size: var(--t-xs);
-            background: color-mix(in oklab, var(--bg-0) 80%, transparent);
-            padding: 1px 4px;
-        }
-    }
         }
     }
 </style>

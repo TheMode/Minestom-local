@@ -28,6 +28,10 @@ function createAggregateBase(opts: BaseOpts) {
     let version = $state(0);
     let now = $state(Date.now());
     let anomalies = $state<Anomaly[]>([]);
+    // Dedup only matters within the small live/history overlap window — `connectionId:seq` keys
+    // never recur — so bound this to recent keys (insertion-ordered Set) instead of growing it
+    // for the life of the page. Evicting old keys is safe: an evicted key won't arrive again.
+    const SEEN_MAX = 20_000;
     const seen = new Set<string>();
     const lanes = opts.lanes !== false;
     const bump = scheduleBump(() => { version++; });
@@ -37,6 +41,7 @@ function createAggregateBase(opts: BaseOpts) {
         const key = `${row.connectionId || row.uuid}:${row.seq}`;
         if (seen.has(key)) return { row, fresh: false };
         seen.add(key);
+        if (seen.size > SEEN_MAX) seen.delete(seen.values().next().value!);
         applyRow(agg, row, String(msg.uuid ?? row.uuid ?? ''), lanes);
         return { row, fresh: true };
     };

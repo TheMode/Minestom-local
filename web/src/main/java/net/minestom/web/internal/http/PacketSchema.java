@@ -38,7 +38,7 @@ public final class PacketSchema {
         final Class<?>[] classes;
         Kind(Class<?>... classes) { this.classes = classes; }
 
-        public boolean isNumeric() {
+        private boolean isNumeric() {
             return this == BYTE || this == SHORT || this == INT || this == LONG
                     || this == FLOAT || this == DOUBLE;
         }

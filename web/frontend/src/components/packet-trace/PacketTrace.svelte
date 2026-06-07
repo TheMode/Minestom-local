@@ -637,8 +637,6 @@
             {prevSameClass}
             {prevRecord}
             related={relatedView}
-            {multi}
-            getRow={rowAt}
             {isBookmarked}
             onClose={closeInspector}
             onJumpSeq={selectSeq}

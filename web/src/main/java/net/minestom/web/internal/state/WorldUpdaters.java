@@ -163,6 +163,10 @@ final class WorldUpdaters {
         final int chunkX = (int) (pos >> 42);
         final int chunkZ = (int) (pos << 22 >> 42);
         final int sectionY = (int) (pos << 44 >> 44);
+        // Every block in the packet lives in this one chunk — resolve it once instead of per block.
+        final long key = chunkIndex(chunkX, chunkZ);
+        final PlayerWorld.Chunk chunk = s.world.chunks.get(key);
+        if (chunk == null) return;
         for (long entry : p.blocks()) {
             final int index = (int) (entry & 0xFFF);
             final int stateId = (int) (entry >>> 12);
@@ -171,7 +175,7 @@ final class WorldUpdaters {
             final int localZ = sectionBlockIndexGetZ(index);
             final Point block = chunkBlockRelativeGetGlobal(
                     localX, sectionY * SECTION_SIZE + localY, localZ, chunkX, chunkZ);
-            applyBlock(s, block.blockX(), block.blockY(), block.blockZ(), stateId);
+            applyBlock(s, chunk, key, block.blockX(), block.blockY(), block.blockZ(), stateId);
         }
     }
 
@@ -201,8 +205,11 @@ final class WorldUpdaters {
     private static void applyBlock(PlayerState s, int wx, int wy, int wz, int stateId) {
         final long key = chunkIndex(globalToChunk(wx), globalToChunk(wz));
         final PlayerWorld.Chunk chunk = s.world.chunks.get(key);
-        if (chunk == null) return;
+        if (chunk != null) applyBlock(s, chunk, key, wx, wy, wz, stateId);
+    }
 
+    private static void applyBlock(PlayerState s, PlayerWorld.Chunk chunk, long key,
+                                   int wx, int wy, int wz, int stateId) {
         chunk.setBlockState(wx, wy, wz, stateId);
 
         final int i = chunk.columnIndex(wx, wz);

@@ -111,7 +111,7 @@ final class SessionWorldUpdaters {
     /// absolute Y slightly off until corrected by the next chunk. Visible entities are cleared
     /// too — vanilla doesn't re-send `DestroyEntitiesPacket` across dimensions.
     private static void resetForDimension(PlayerState s, String worldName) {
-        s.world.clear();
+        s.world.clearForDimensionChange();
         s.visibleEntities.clear();
         s.markDirty("visibleEntities");
         final boolean tall = worldName == null || !(NETHER.equals(worldName) || END.equals(worldName));

@@ -15,6 +15,10 @@ export class PacketTape {
     private flushScheduled = false;
     private readonly onFlush: (stats: TapeFlushStats) => void;
 
+    /// Cap on the live buffer so a long-running tail can't grow (and re-snapshot) without bound.
+    /// Oldest rows are dropped once over. `loadHistory` may exceed it transiently.
+    maxRows = 50_000;
+
     minSeq = 0;
     maxSeq = 0;
 
@@ -68,6 +72,7 @@ export class PacketTape {
         let changed = 0;
         for (const row of batch) if (this.upsert(row)) changed++;
         if (!changed) return;
+        this.trim();
 
         this.onFlush({
             added: changed,
@@ -75,6 +80,15 @@ export class PacketTape {
             maxSeq: this.maxSeq,
             length: this.rows.length,
         });
+    }
+
+    /// Drop oldest rows once the live buffer exceeds `maxRows`. Rows are seq-sorted, so the
+    /// oldest sit at the front; minSeq follows the new head.
+    private trim() {
+        const over = this.rows.length - this.maxRows;
+        if (over <= 0) return;
+        this.rows.splice(0, over);
+        this.minSeq = this.rows.length ? this.rows[0]!.seq : 0;
     }
 
     private upsert(row: PacketRow): boolean {

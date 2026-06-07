@@ -13,19 +13,19 @@ import java.util.Hashtable;
 
 /// Parse and resolve Minecraft server addresses. Two flavours:
 ///
-/// - **Plain.** [#parse] / [#resolve] — accepts `host:port`, `[ipv6]:port`, or bare port; throws
-///   on DNS failure. Use for `--bind` / `--dashboard` and anywhere the caller wants a literal
-///   socket address.
-/// - **Minecraft.** [#parseMinecraft] / [#resolveMinecraft] — additionally tries the
-///   `_minecraft._tcp.<host>` SRV record before resolving. When the SRV exists its target +
-///   port wins; otherwise falls back to the supplied host/port (or to port 25565 for bare
-///   hostnames). Mirrors the vanilla client's connect-by-name behaviour.
+/// - **Plain.** [#parse] — accepts `host:port`, `[ipv6]:port`, or bare port; throws on DNS
+///   failure. Use for `--bind` / `--dashboard` and anywhere the caller wants a literal socket
+///   address.
+/// - **Minecraft.** [#parseMinecraft] — additionally tries the `_minecraft._tcp.<host>` SRV
+///   record before resolving. When the SRV exists its target + port wins; otherwise falls back
+///   to the supplied host/port (or to port 25565 for bare hostnames). Mirrors the vanilla
+///   client's connect-by-name behaviour.
 ///
 /// Resolution is synchronous; the SRV lookup uses the JVM's bundled DNS provider via JNDI. On
 /// timeout or no-record the lookup returns silently and the plain host:port is used.
 public final class AddressResolver {
     /// Default Minecraft port — used when the input is a bare hostname with no SRV record.
-    public static final int DEFAULT_PORT = 25565;
+    private static final int DEFAULT_PORT = 25565;
 
     private AddressResolver() {}
 
@@ -56,7 +56,7 @@ public final class AddressResolver {
     }
 
     /// Resolve an already-split `host` + `port` pair. No SRV.
-    public static InetSocketAddress resolve(String host, int port) {
+    private static InetSocketAddress resolve(String host, int port) {
         requirePort(port);
         final InetSocketAddress addr = new InetSocketAddress(host, port);
         if (addr.isUnresolved()) throw new IllegalArgumentException("could not resolve host: " + host);
@@ -65,15 +65,10 @@ public final class AddressResolver {
 
     /// Resolve `host` + `port` with SRV fallback. If `_minecraft._tcp.<host>` resolves, its
     /// target + port wins over `port`. Otherwise the supplied pair is used as-is.
-    public static InetSocketAddress resolveMinecraft(String host, int port) {
+    private static InetSocketAddress resolveMinecraft(String host, int port) {
         final SrvRecord srv = lookupMinecraftSrv(host);
         if (srv != null) return resolve(srv.target(), srv.port());
         return resolve(host, port);
-    }
-
-    /// Resolve `host` with SRV, falling back to [#DEFAULT_PORT] when no SRV record exists.
-    public static InetSocketAddress resolveMinecraft(String host) {
-        return resolveMinecraft(host, DEFAULT_PORT);
     }
 
     private static InetSocketAddress parse(String spec, String defaultHost, boolean minecraftSrv) {

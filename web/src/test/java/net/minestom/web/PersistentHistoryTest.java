@@ -2,6 +2,7 @@ package net.minestom.web;
 
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.network.ConnectionState;
+import net.minestom.web.internal.Uuids;
 import net.minestom.web.internal.persist.HistoryFile;
 import net.minestom.web.internal.persist.PersistentHistory;
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,7 @@ class PersistentHistoryTest {
 
                 try (PreparedStatement ps = c.prepareStatement(
                         "SELECT address, connect_ms, disconnect_ms FROM connections WHERE id = ?")) {
-                    ps.setBytes(1, HistoryFile.uuidBytes(conn));
+                    ps.setBytes(1, Uuids.toBytes(conn));
                     r = ps.executeQuery();
                     r.next();
                     assertEquals("/127.0.0.1:50000", r.getString(1));
@@ -58,7 +59,7 @@ class PersistentHistoryTest {
 
                 try (PreparedStatement ps = c.prepareStatement(
                         "SELECT seq, ts_ms, direction, payload FROM io_events WHERE connection_id = ? ORDER BY seq")) {
-                    ps.setBytes(1, HistoryFile.uuidBytes(conn));
+                    ps.setBytes(1, Uuids.toBytes(conn));
                     r = ps.executeQuery();
                     r.next();
                     assertEquals(1, r.getLong(1));
@@ -109,7 +110,7 @@ class PersistentHistoryTest {
         try (Connection c = DriverManager.getConnection("jdbc:sqlite:" + db.toAbsolutePath());
              var ps = c.prepareStatement(
                      "SELECT packet_seq, io_event_seq, state_sb, compression FROM packet_checkpoints WHERE connection_id = ?")) {
-            ps.setBytes(1, HistoryFile.uuidBytes(conn));
+            ps.setBytes(1, Uuids.toBytes(conn));
             try (ResultSet r = ps.executeQuery()) {
                 assertTrue(r.next());
                 assertEquals(250, r.getLong(1));

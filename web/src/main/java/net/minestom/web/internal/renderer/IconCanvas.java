@@ -1,7 +1,5 @@
 package net.minestom.web.internal.renderer;
 
-import org.jetbrains.annotations.Nullable;
-
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
@@ -29,10 +27,10 @@ final class IconCanvas {
         float uOff = u0 / (float) tw;
         float vOff = v0 / (float) th;
 
+        final double[] uv = new double[2]; // reused across every pixel in this quad
         for (int y = minY; y <= maxY; y++) {
             for (int x = minX; x <= maxX; x++) {
-                double[] uv = barycentric(x + 0.5, y + 0.5, x0, y0, x1, y1, x2, y2, x3, y3);
-                if (uv == null) continue;
+                if (!barycentric(uv, x + 0.5, y + 0.5, x0, y0, x1, y1, x2, y2, x3, y3)) continue;
                 int tx = Math.clamp((int) ((uOff + uv[0] * uScale) * tw), 0, tw - 1);
                 int ty = Math.clamp((int) ((vOff + uv[1] * vScale) * th), 0, th - 1);
                 int argb = texture.getRGB(tx, ty);
@@ -55,13 +53,11 @@ final class IconCanvas {
     }
 
     byte[] png() throws IOException {
-        BufferedImage hi = new BufferedImage(RENDER, RENDER, BufferedImage.TYPE_INT_ARGB);
-        hi.setRGB(0, 0, RENDER, RENDER, pixels, 0, RENDER);
-
+        // Nearest-neighbour downsample straight from the int[] — no intermediate full-res image.
         BufferedImage out = new BufferedImage(OUT, OUT, BufferedImage.TYPE_INT_ARGB);
         for (int y = 0; y < OUT; y++) {
             for (int x = 0; x < OUT; x++) {
-                out.setRGB(x, y, hi.getRGB(x * RENDER / OUT, y * RENDER / OUT));
+                out.setRGB(x, y, pixels[(y * RENDER / OUT) * RENDER + (x * RENDER / OUT)]);
             }
         }
         ByteArrayOutputStream baos = new ByteArrayOutputStream(2048);
@@ -87,28 +83,33 @@ final class IconCanvas {
                 | ((b * a + ob * inv) / 255);
     }
 
-    private static double @Nullable [] barycentric(double px, double py,
-                                                   double x0, double y0, double x1, double y1,
-                                                   double x2, double y2, double x3, double y3) {
-        double[] uv = tri(px, py, x0, y0, x1, y1, x3, y3);
-        if (uv != null) return uv;
+    /// Writes the (u, v) weights into `uv` and returns true on a hit; false (uv untouched) for a
+    /// degenerate quad or a point outside both triangles.
+    private static boolean barycentric(double[] uv, double px, double py,
+                                       double x0, double y0, double x1, double y1,
+                                       double x2, double y2, double x3, double y3) {
+        if (tri(uv, px, py, x0, y0, x1, y1, x3, y3)) return true;
         double d = (y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3);
-        if (Math.abs(d) < 1e-6) return null;
+        if (Math.abs(d) < 1e-6) return false;
         double w0 = ((y2 - y3) * (px - x3) + (x3 - x2) * (py - y3)) / d;
         double w1 = ((y3 - y1) * (px - x3) + (x1 - x3) * (py - y3)) / d;
         double w2 = 1.0 - w0 - w1;
-        if (w0 < -0.001 || w1 < -0.001 || w2 < -0.001) return null;
-        return new double[]{w0 + w1, w1 + w2};
+        if (w0 < -0.001 || w1 < -0.001 || w2 < -0.001) return false;
+        uv[0] = w0 + w1;
+        uv[1] = w1 + w2;
+        return true;
     }
 
-    private static double @Nullable [] tri(double px, double py,
-                                           double x0, double y0, double x1, double y1, double x2, double y2) {
+    private static boolean tri(double[] uv, double px, double py,
+                               double x0, double y0, double x1, double y1, double x2, double y2) {
         double d = (y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2);
-        if (Math.abs(d) < 1e-6) return null;
+        if (Math.abs(d) < 1e-6) return false;
         double w0 = ((y1 - y2) * (px - x2) + (x2 - x1) * (py - y2)) / d;
         double w1 = ((y2 - y0) * (px - x2) + (x0 - x2) * (py - y2)) / d;
         double w2 = 1.0 - w0 - w1;
-        if (w0 < -0.001 || w1 < -0.001 || w2 < -0.001) return null;
-        return new double[]{w1, w2};
+        if (w0 < -0.001 || w1 < -0.001 || w2 < -0.001) return false;
+        uv[0] = w1;
+        uv[1] = w2;
+        return true;
     }
 }

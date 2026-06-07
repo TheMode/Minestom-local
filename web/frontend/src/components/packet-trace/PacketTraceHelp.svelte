@@ -57,10 +57,9 @@
         <h3>Inspector</h3>
         <p style:color="var(--ink-3)" style:margin="0">
             <b>Decoded</b> · pretty JSON, mutated fields highlighted vs prev same-class.<br />
-            <b>Bytes</b> · hex dump with ascii column.<br />
             <b>Mutates</b> · which player-state fields this packet changes, with from→to.<br />
             <b>Related</b> · packets correlated by subject, class, or causal chain.<br />
-            <b>Diff</b> · field-by-field against prior same class — or against another packet if two rows are shift-selected.
+            <b>Diff</b> · field-by-field against the prior same-class packet.
         </p>
     </div>
 </div>

@@ -26,7 +26,7 @@
     );
 
     const ql = $derived(q.toLowerCase().trim());
-    const filtered = $derived(ql ? materials.filter(m => m.includes(ql)) : materials);
+    const filtered = $derived(ql ? materials.filter(m => m.toLowerCase().includes(ql)) : materials);
     const clean = $derived(stripNamespace(value));
 </script>
 

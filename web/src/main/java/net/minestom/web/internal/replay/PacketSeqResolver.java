@@ -5,6 +5,7 @@ import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.packet.PacketReading;
 import net.minestom.web.Direction;
 import net.minestom.web.PacketRecord;
+import net.minestom.web.internal.Uuids;
 import net.minestom.web.internal.codec.PacketDecoder;
 import net.minestom.web.internal.persist.HistoryFile;
 import net.minestom.web.internal.session.Session;
@@ -65,7 +66,7 @@ public final class PacketSeqResolver {
                     ? "SELECT direction, payload FROM io_events WHERE connection_id = ? AND seq > ? ORDER BY seq ASC"
                     : "SELECT direction, payload FROM io_events WHERE connection_id = ? ORDER BY seq ASC";
             try (PreparedStatement ps = db.prepareStatement(sql)) {
-                ps.setBytes(1, HistoryFile.uuidBytes(connectionId));
+                ps.setBytes(1, Uuids.toBytes(connectionId));
                 if (afterIo > 0) ps.setLong(2, afterIo);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
@@ -178,7 +179,7 @@ public final class PacketSeqResolver {
     private static @Nullable Init loadInit(Connection db, UUID connectionId) throws SQLException {
         try (PreparedStatement ps = db.prepareStatement(
                 "SELECT init_state_sb, init_state_cb, init_compression FROM connections WHERE id = ?")) {
-            ps.setBytes(1, HistoryFile.uuidBytes(connectionId));
+            ps.setBytes(1, Uuids.toBytes(connectionId));
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;
                 final int sbId = rs.getInt(1);
@@ -204,7 +205,7 @@ public final class PacketSeqResolver {
                 ORDER BY packet_seq DESC
                 LIMIT 1
                 """)) {
-            ps.setBytes(1, HistoryFile.uuidBytes(connectionId));
+            ps.setBytes(1, Uuids.toBytes(connectionId));
             ps.setLong(2, packetSeq);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return null;

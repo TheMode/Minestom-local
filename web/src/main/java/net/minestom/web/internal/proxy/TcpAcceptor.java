@@ -11,6 +11,7 @@ import net.minestom.web.BackendRouter;
 import net.minestom.web.Direction;
 import net.minestom.web.LifecycleEvent;
 import net.minestom.web.ProxyConfig;
+import net.minestom.web.internal.Uuids;
 import net.minestom.web.internal.codec.PacketDecoder;
 import net.minestom.web.internal.persist.HistoryFile;
 import net.minestom.web.internal.persist.PersistentHistory;
@@ -88,7 +89,7 @@ public final class TcpAcceptor implements AutoCloseable {
         final InetSocketAddress reachable = config.reachableAddress();
         final boolean a = inject(playerUuid, Direction.CLIENTBOUND,
                 new CookieStorePacket(JourneyTracker.COOKIE_KEY,
-                        JourneyTracker.cookieBytes(pending.cookieId())));
+                        Uuids.toBytes(pending.cookieId())));
         final boolean b = inject(playerUuid, Direction.CLIENTBOUND,
                 new TransferPacket(reachable.getHostString(), reachable.getPort()));
         return a && b;
@@ -192,7 +193,7 @@ public final class TcpAcceptor implements AutoCloseable {
                 session.publish(new SessionEvent.Lifecycle(session.lifecycle.record(
                         LifecycleEvent.Kind.SERVER_SWITCH, -1,
                         serverSwitchJson(cookie.fromAddress(), toAddress))));
-            }, new java.util.concurrent.CompletableFuture<>()));
+            }));
         }
 
         final long initialIoSeq = seedSyntheticLogin(session, login);
@@ -285,8 +286,7 @@ public final class TcpAcceptor implements AutoCloseable {
         }
         // Queued; the worker's run() drains synthetics on its first iteration before wire I/O.
         session.send(new SessionMessage.Mutate(
-                _ -> registry.applier().apply(session, s.direction(), s.state(), s.packet(), 0, ioEventSeq),
-                new java.util.concurrent.CompletableFuture<>()));
+                _ -> registry.applier().apply(session, s.direction(), s.state(), s.packet(), 0, ioEventSeq)));
     }
 
     private record Synthetic(Direction direction, ConnectionState state, Packet packet, int threshold) {}

@@ -26,6 +26,7 @@
 
 <script lang="ts">
     import { api } from '../lib/api.ts';
+    import { players as playersStore } from '../state/players.svelte.ts';
     import { subscribeTopic } from '../state/bus.svelte.ts';
     import { Topics } from '../lib/topics.ts';
     import { debounce } from '../lib/util.ts';
@@ -55,10 +56,8 @@
             const m = r.matches || [];
             matches = m;
             status = { kind: m.length ? 'ok' : 'dim', message: `Compiled · ${m.length} match${m.length === 1 ? '' : 'es'}` };
-            try {
-                const ps = await api('/players');
-                players = new Map(ps.map(p => [p.uuid, p]));
-            } catch {}
+            // Map matched UUIDs to rows from the live players store rather than re-fetching /players.
+            players = new Map(playersStore.list.map(p => [p.uuid, p]));
         } catch (e) {
             status = mqlError(e);
             matches = [];

@@ -33,8 +33,7 @@ public record StatePatch(long seq, long ts,
     /// [#max] is the bounded size so the frontend can mirror the same eviction.
     public record Append(List<Object> elements, int max) {}
 
-    /// Convenience builder for tests + the rare hand-rolled caller. Production patches come
-    /// from [PlayerState#drainPatch].
+    /// Test-only convenience builder. Production patches always come from [PlayerState#drainPatch].
     public static StatePatch empty(long seq) {
         return new StatePatch(seq, System.currentTimeMillis(),
                 new LinkedHashMap<>(), new LinkedHashMap<>(), new LinkedHashMap<>());

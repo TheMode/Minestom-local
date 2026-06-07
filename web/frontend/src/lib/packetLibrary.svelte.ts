@@ -79,11 +79,6 @@ export function kindToBucket(kind: string): LibraryBucket | null {
 const MIME_PREFIX = 'application/x-mn-lib-';
 const mimeFor = (bucket: LibraryBucket) => MIME_PREFIX + bucket;
 
-export function setLibraryDrag(e: DragEvent, bucket: LibraryBucket, value: unknown): void {
-    e.dataTransfer?.setData(mimeFor(bucket), JSON.stringify(value));
-    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
-}
-
 /// True when `dt` advertises a compatible library drag — call from dragenter/dragover to
 /// decide whether to `preventDefault`. Payload isn't readable here; use `readLibraryDrag`
 /// in the `drop` handler.

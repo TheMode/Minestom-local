@@ -11,7 +11,7 @@ import java.nio.file.Path;
 /// are wired up at runtime.
 ///
 /// There is no pre-registered backend roster: the proxy can move players to **any** reachable
-/// address via [ProxyServer#proxy] `.movePlayer(uuid, host, port)`. `defaultBackend` is only the
+/// address via [ProxyServer#movePlayer] `(uuid, addressSpec)`. `defaultBackend` is only the
 /// landing target for fresh `LOGIN` connections.
 public record ProxyConfig(
         @Nullable InetSocketAddress bind,

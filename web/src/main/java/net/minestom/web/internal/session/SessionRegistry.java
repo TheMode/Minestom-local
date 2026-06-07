@@ -81,7 +81,7 @@ public final class SessionRegistry {
         liveByPlayerUuid.put(uuid, session);
         final JourneyTracker tracker = journeys;
         if (tracker != null && session.journeyId() != null && session.backendAddress() != null) {
-            tracker.recordAssignment(uuid, session.journeyId(), session.backendAddress());
+            tracker.recordAssignment(uuid, session.backendAddress());
         }
     }
 
@@ -120,8 +120,10 @@ public final class SessionRegistry {
     public boolean playerMatches(Query query, Session session) {
         Objects.requireNonNull(query, "query");
         Objects.requireNonNull(session, "session");
+        // Bounded read: a single wedged owner thread must not pin the HTTP request thread while
+        // sessionsMatching scans every session. A busy/slow owner just counts as non-matching.
         try {
-            return session.readState(query::matches);
+            return session.tryReadState(query::matches, Session.HTTP_READ_TIMEOUT_MS);
         } catch (Exception e) {
             return false;
         }
@@ -196,7 +198,12 @@ public final class SessionRegistry {
             if (player.uuid == null) return null;
             return PlayerView.Retained.from(session, player);
         });
-        if (snapshot == null) return;
+        if (snapshot == null) {
+            // Never-identified session (e.g. failed/STATUS connection): nothing to retain, and
+            // nothing will ever evict() it, so drop it from the live map here.
+            sessions.remove(session.id);
+            return;
+        }
         liveByPlayerUuid.remove(snapshot.uuid(), session);
         retainedByPlayerUuid.merge(snapshot.uuid(), snapshot, (existing, candidate) ->
                 candidate.connectedAt() >= existing.connectedAt() ? candidate : existing);

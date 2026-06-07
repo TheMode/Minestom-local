@@ -6,7 +6,6 @@ import net.minestom.web.Direction;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -178,23 +177,6 @@ public final class HistoryFile {
     /// no conversion at the persist/read boundary.
     public static long nowMs() {
         return System.currentTimeMillis();
-    }
-
-    // ---------------------------------------------------------------- UUID <-> BLOB(16)
-
-    public static byte[] uuidBytes(UUID uuid) {
-        final ByteBuffer buf = ByteBuffer.allocate(16);
-        buf.putLong(uuid.getMostSignificantBits());
-        buf.putLong(uuid.getLeastSignificantBits());
-        return buf.array();
-    }
-
-    public static UUID uuidFromBytes(byte[] bytes) {
-        if (bytes == null || bytes.length != 16) {
-            throw new IllegalArgumentException("not a 16-byte UUID: " + (bytes == null ? "null" : bytes.length));
-        }
-        final ByteBuffer buf = ByteBuffer.wrap(bytes);
-        return new UUID(buf.getLong(), buf.getLong());
     }
 
     // ---------------------------------------------------------------- enum <-> ordinal

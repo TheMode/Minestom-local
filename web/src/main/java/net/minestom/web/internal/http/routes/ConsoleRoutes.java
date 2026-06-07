@@ -1,6 +1,5 @@
 package net.minestom.web.internal.http.routes;
 
-import com.google.gson.JsonObject;
 import io.javalin.config.RoutesConfig;
 import net.minestom.web.internal.codec.WebCodecs;
 import net.minestom.web.internal.codec.WebPayloads;
@@ -17,12 +16,8 @@ public final class ConsoleRoutes {
                 encoded(ctx, WebCodecs.CONSOLE_LINE_LIST, scope.control.consoleHistory())));
 
         app.post("/api/console/command", liveOnly((ctx, scope) -> {
-            JsonObject body = parseJsonBody(ctx);
-            String command = body.get("command").getAsString();
-            if (command.isBlank()) {
-                badRequest(ctx, new IllegalArgumentException("empty command"));
-                return;
-            }
+            String command = requiredString(ctx, parseJsonBody(ctx), "command");
+            if (command == null) return;
             scope.control.sendCommand(command);
             jsonRaw(ctx, OK_JSON);
         }));

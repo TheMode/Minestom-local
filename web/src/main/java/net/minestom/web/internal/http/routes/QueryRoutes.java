@@ -19,12 +19,16 @@ public final class QueryRoutes {
         app.get("/api/mql/constants", ctx -> json(ctx, MqlConstants.payload()));
 
         app.post("/api/expression/compile", scoped((ctx, scope) -> {
-            scope.expressions.compile(parseJsonBody(ctx).get("src").getAsString());
+            String src = stringField(ctx, parseJsonBody(ctx), "src");
+            if (src == null) return;
+            scope.expressions.compile(src);
             jsonRaw(ctx, OK_JSON);
         }));
 
         app.post("/api/query", scoped((ctx, scope) -> {
-            var q = scope.queries.compile(parseJsonBody(ctx).get("ql").getAsString());
+            String ql = stringField(ctx, parseJsonBody(ctx), "ql");
+            if (ql == null) return;
+            var q = scope.queries.compile(ql);
             List<String> matches = new ArrayList<>();
             for (Session session : scope.registry.sessionsMatching(q)) matches.add(String.valueOf(session.playerUuid()));
             encoded(ctx, WebCodecs.QUERY_RESULT, new WebPayloads.QueryResult(matches));

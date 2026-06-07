@@ -17,7 +17,8 @@ public final class InjectRoutes {
             Session session = lookupLive(ctx, scope);
             if (session == null) return;
             JsonObject body = parseJsonBody(ctx);
-            String cls = body.get("class").getAsString();
+            String cls = requiredString(ctx, body, "class");
+            if (cls == null) return;
             JsonObject fields = body.has("fields") ? body.getAsJsonObject("fields") : new JsonObject();
             if (!scope.proxy.inject(session.playerUuid(), PacketCatalog.directionFor(cls), PacketCodec.decode(cls, fields))) {
                 notFound(ctx, "no live connection");

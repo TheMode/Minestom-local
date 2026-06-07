@@ -31,8 +31,9 @@ public final class RoutineRoutes {
         app.put("/api/routines/{id}/enabled", scoped((ctx, scope) -> {
             UUID id = pathUuid(ctx, "id");
             if (id == null) return;
-            JsonObject body = parseJsonBody(ctx);
-            RegisteredRoutine routine = scope.registry.setRoutineEnabled(id, body.get("enabled").getAsBoolean());
+            Boolean enabled = requiredBoolean(ctx, parseJsonBody(ctx), "enabled");
+            if (enabled == null) return;
+            RegisteredRoutine routine = scope.registry.setRoutineEnabled(id, enabled);
             jsonOrNotFound(ctx, routine != null ? RoutineCodecs.routineJson(routine) : null, "unknown routine");
         }));
 
@@ -58,7 +59,9 @@ public final class RoutineRoutes {
             JsonObject body = parseJsonBody(ctx);
             String qSrc = body.has("query") && !body.get("query").isJsonNull() ? body.get("query").getAsString() : null;
             Query q = scope.queries.compile(qSrc);
-            Action action = scope.registry.resolveAction(body.getAsJsonObject("action"));
+            JsonObject actionObj = requiredObject(ctx, body, "action");
+            if (actionObj == null) return;
+            Action action = scope.registry.resolveAction(actionObj);
             ActionRunner runner = scope.registry.actionRunner();
             int matched = 0, fired = 0;
             List<String> errors = new ArrayList<>();

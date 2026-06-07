@@ -4,6 +4,7 @@ import net.minestom.server.MinecraftServer;
 import net.minestom.server.network.ConnectionState;
 import net.minestom.web.Direction;
 import net.minestom.web.PacketEvent;
+import net.minestom.web.internal.Uuids;
 import net.minestom.web.internal.http.PacketCatalog;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -189,7 +190,7 @@ public final class PersistentHistory implements AutoCloseable {
             sql.append(" ORDER BY seq ASC LIMIT ?");
             try (PreparedStatement ps = db.prepareStatement(sql.toString())) {
                 int i = 1;
-                ps.setBytes(i++, HistoryFile.uuidBytes(connectionId));
+                ps.setBytes(i++, Uuids.toBytes(connectionId));
                 ps.setLong(i++, sinceSeq);
                 if (dirFilter != null) ps.setInt(i++, HistoryFile.directionId(dirFilter));
                 if (classFilter != null && !classFilter.isEmpty()) ps.setString(i++, classFilter);
@@ -414,10 +415,10 @@ public final class PersistentHistory implements AutoCloseable {
             switch (op) {
                 case Op.OpenConnection(UUID id, long sid, UUID journeyId,
                                        String upstreamAddress, String addr, long ts) -> {
-                    insertConnect.setBytes(1, HistoryFile.uuidBytes(id));
+                    insertConnect.setBytes(1, Uuids.toBytes(id));
                     insertConnect.setLong(2, sid);
                     if (journeyId == null) insertConnect.setNull(3, Types.BLOB);
-                    else insertConnect.setBytes(3, HistoryFile.uuidBytes(journeyId));
+                    else insertConnect.setBytes(3, Uuids.toBytes(journeyId));
                     if (upstreamAddress == null) insertConnect.setNull(4, Types.VARCHAR);
                     else insertConnect.setString(4, upstreamAddress);
                     insertConnect.setString(5, addr);
@@ -426,31 +427,31 @@ public final class PersistentHistory implements AutoCloseable {
                     insertConnect.addBatch();
                 }
                 case Op.OpenJourney(UUID journeyId, UUID playerUuid, long ts) -> {
-                    insertJourney.setBytes(1, HistoryFile.uuidBytes(journeyId));
+                    insertJourney.setBytes(1, Uuids.toBytes(journeyId));
                     if (playerUuid == null) insertJourney.setNull(2, Types.BLOB);
-                    else insertJourney.setBytes(2, HistoryFile.uuidBytes(playerUuid));
+                    else insertJourney.setBytes(2, Uuids.toBytes(playerUuid));
                     insertJourney.setLong(3, ts);
                     insertJourney.addBatch();
                 }
                 case Op.JourneyPlayerUuid(UUID journeyId, UUID playerUuid) -> {
-                    updateJourneyPlayer.setBytes(1, HistoryFile.uuidBytes(playerUuid));
-                    updateJourneyPlayer.setBytes(2, HistoryFile.uuidBytes(journeyId));
+                    updateJourneyPlayer.setBytes(1, Uuids.toBytes(playerUuid));
+                    updateJourneyPlayer.setBytes(2, Uuids.toBytes(journeyId));
                     updateJourneyPlayer.addBatch();
                 }
                 case Op.InitConnection(UUID id, var sb, var cb, int compression) -> {
                     setNullableInt(updateConnectInit, 1, HistoryFile.stateId(sb));
                     setNullableInt(updateConnectInit, 2, HistoryFile.stateId(cb));
                     setNullableInt(updateConnectInit, 3, compression > 0 ? compression : -1);
-                    updateConnectInit.setBytes(4, HistoryFile.uuidBytes(id));
+                    updateConnectInit.setBytes(4, Uuids.toBytes(id));
                     updateConnectInit.addBatch();
                 }
                 case Op.CloseConnection(UUID id, long ts) -> {
                     updateDisconnect.setLong(1, ts);
-                    updateDisconnect.setBytes(2, HistoryFile.uuidBytes(id));
+                    updateDisconnect.setBytes(2, Uuids.toBytes(id));
                     updateDisconnect.addBatch();
                 }
                 case Op.Io(UUID id, long seq, long ts, Direction dir, byte[] payload) -> {
-                    insertIo.setBytes(1, HistoryFile.uuidBytes(id));
+                    insertIo.setBytes(1, Uuids.toBytes(id));
                     insertIo.setLong(2, seq);
                     insertIo.setLong(3, ts);
                     insertIo.setInt(4, HistoryFile.directionId(dir));
@@ -458,7 +459,7 @@ public final class PersistentHistory implements AutoCloseable {
                     insertIo.addBatch();
                 }
                 case Op.Checkpoint(UUID id, long packetSeq, long ioEventSeq, var sb, var cb, int compression) -> {
-                    insertCheckpoint.setBytes(1, HistoryFile.uuidBytes(id));
+                    insertCheckpoint.setBytes(1, Uuids.toBytes(id));
                     insertCheckpoint.setLong(2, packetSeq);
                     insertCheckpoint.setLong(3, ioEventSeq);
                     setNullableInt(insertCheckpoint, 4, HistoryFile.stateId(sb));
@@ -467,7 +468,7 @@ public final class PersistentHistory implements AutoCloseable {
                     insertCheckpoint.addBatch();
                 }
                 case Op.PacketRow(UUID id, PacketEvent ev) -> {
-                    insertPacketEvent.setBytes(1, HistoryFile.uuidBytes(id));
+                    insertPacketEvent.setBytes(1, Uuids.toBytes(id));
                     insertPacketEvent.setLong(2, ev.seq());
                     insertPacketEvent.setLong(3, ev.ts());
                     insertPacketEvent.setInt(4, HistoryFile.directionId(ev.direction()));

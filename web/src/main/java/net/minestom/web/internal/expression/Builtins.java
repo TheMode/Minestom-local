@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.DoubleBinaryOperator;
 
@@ -32,8 +33,8 @@ final class Builtins {
                 Block block = Block.fromStateId((int) v.num());
                 return block == null ? ExprValue.NULL : new ExprValue.Str(block.key().asString());
             }),
-            unary("upper(s)", "Uppercase a string.", (v, s) -> new ExprValue.Str(v.str().toUpperCase())),
-            unary("lower(s)", "Lowercase a string.", (v, s) -> new ExprValue.Str(v.str().toLowerCase())),
+            unary("upper(s)", "Uppercase a string.", (v, s) -> new ExprValue.Str(v.str().toUpperCase(Locale.ROOT))),
+            unary("lower(s)", "Lowercase a string.", (v, s) -> new ExprValue.Str(v.str().toLowerCase(Locale.ROOT))),
             unary("str(x)", "Coerce any value to its string form.", (v, s) -> new ExprValue.Str(v.str())),
             unary("num(x)", "Coerce any value to a number.", (v, s) -> new ExprValue.Num(v.num())),
             unary("len(s)", "Length of a string.", (v, s) -> new ExprValue.Num(v.str().length())),
@@ -78,7 +79,7 @@ final class Builtins {
     static ExprValue apply(String name, List<Expr> args, PlayerState s) {
         UnaryDef unary = UNARY.get(name);
         if (unary != null) {
-            if (args.size() != 1) return ExprValue.NULL;
+            if (args.size() != 1) throw new IllegalArgumentException(name + " expects 1 argument");
             return unary.fn().apply(args.getFirst().eval(s), s);
         }
         FnDef fn = FUNCTIONS.get(name);

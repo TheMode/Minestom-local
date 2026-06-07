@@ -58,6 +58,11 @@ final class VitalsUpdaters {
                     // Box explicitly: attributes is Map<String, Double>; set's primitive double
                     // overload would auto-unbox and we'd lose the null check on first insert.
                     s.attributes.put(name, s.set("attributes." + name, s.attributes.get(name), Double.valueOf(prop.value())));
+                    // Surface max health as its own field so the dashboard's health gauge isn't
+                    // pinned to 20 (matches both the `generic.max_health` and `max_health` keys).
+                    if (name.endsWith("max_health")) {
+                        s.maxHealth = s.set("maxHealth", s.maxHealth, (float) prop.value());
+                    }
                 }
             }),
             // Keep-alive RTT along the proxied path: stamp send time on the outbound (clientbound)

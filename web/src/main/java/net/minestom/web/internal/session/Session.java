@@ -123,10 +123,6 @@ public final class Session {
         listeners.add(listener);
     }
 
-    public void removeListener(SessionListener listener) {
-        listeners.remove(listener);
-    }
-
     public int listenerCount() {
         return listeners.size();
     }
@@ -154,13 +150,13 @@ public final class Session {
         this.backendAddress = address;
         final String label = address == null ? null : address.getHostString() + ":" + address.getPort();
         if (ownerThread == null) player.backendAddress = label;
-        else send(new SessionMessage.Mutate(p -> p.backendAddress = label, new CompletableFuture<>()));
+        else send(new SessionMessage.Mutate(p -> p.backendAddress = label));
     }
 
     public void setJourneyId(UUID id) {
         this.journeyId = id;
         if (ownerThread == null) player.journeyId = id;
-        else send(new SessionMessage.Mutate(p -> p.journeyId = id, new CompletableFuture<>()));
+        else send(new SessionMessage.Mutate(p -> p.journeyId = id));
     }
 
     public java.net.InetSocketAddress backendAddress() { return backendAddress; }
@@ -305,16 +301,19 @@ public final class Session {
     }
 
     private boolean enqueueMessage(SessionMessage message) {
-        return stateTasks.offer(adapt(message));
+        final boolean accepted = stateTasks.offer(adapt(message));
+        if (!accepted) {
+            // A dropped Mutate/SetRoutines silently diverges session state from intent (a lost
+            // SERVER_SWITCH mutate fails a transfer reconnect; a lost SetRoutines freezes a stale
+            // routine set), so a full mailbox must never be silent.
+            LOGGER.warn("mailbox full for session {} — dropped {}", id, message.getClass().getSimpleName());
+        }
+        return accepted;
     }
 
     private StateTask<?> adapt(SessionMessage message) {
         return switch (message) {
-            case SessionMessage.Mutate m -> new StateTask<>(p -> {
-                try { m.body().accept(p); m.ack().complete(null); }
-                catch (Throwable t) { m.ack().completeExceptionally(t); }
-                return null;
-            });
+            case SessionMessage.Mutate m -> new StateTask<>(p -> { m.body().accept(p); return null; });
             case SessionMessage.SetRoutines set -> new StateTask<>(_ -> {
                 routines = List.copyOf(set.routines());
                 routineMatched.keySet().retainAll(routineIds(routines));
@@ -331,7 +330,8 @@ public final class Session {
     }
 
     public void evaluateRoutinesOnPacket(Packet packet) {
-        if (routines.isEmpty()) return;
+        // Mirror the cadence/match paths: don't evaluate against a not-yet-identified player.
+        if (routines.isEmpty() || playerUuid == null) return;
         final long now = System.currentTimeMillis();
         for (RegisteredRoutine reg : routines) {
             if (!reg.enabled()) continue;
@@ -407,6 +407,13 @@ public final class Session {
     public boolean close() {
         if (!closed.compareAndSet(false, true)) return false;
         if (isOwnerThread()) {
+            finishClose();
+        } else if (ownerThread == null) {
+            // No worker ever bound (e.g. login failed before ConnectionWorker.run started):
+            // adopt the calling thread as owner so the teardown — including the retain()
+            // readState in the onClosed callback — runs inline instead of blocking forever on
+            // a mailbox nobody will ever drain.
+            bindOwner();
             finishClose();
         } else {
             try { mutateState(_ -> finishClose()); }

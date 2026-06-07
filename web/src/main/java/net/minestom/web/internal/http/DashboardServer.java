@@ -3,6 +3,7 @@ package net.minestom.web.internal.http;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.javalin.Javalin;
+import io.javalin.compression.CompressionStrategy;
 import io.javalin.config.RoutesConfig;
 import io.javalin.http.Context;
 import io.javalin.http.staticfiles.Location;
@@ -39,6 +40,7 @@ public final class DashboardServer implements AutoCloseable {
     private static final long REPLAY_IDLE_TTL_MS = 30 * 60 * 1000L;
     private static final long DISCONNECTED_PLAYER_TTL_MS = 30 * 60 * 1000L;
     private static final long MAX_REPLAY_BYTES = 512L * 1024 * 1024;
+    private static final long RATE_BUCKET_IDLE_NANOS = TimeUnit.MINUTES.toNanos(10);
 
     private final ProxyConfig config;
     private final ConcurrentHashMap<String, DashboardScope> scopes = new ConcurrentHashMap<>();
@@ -107,12 +109,18 @@ public final class DashboardServer implements AutoCloseable {
                 staticFiles.directory = "/web";
                 staticFiles.location = Location.CLASSPATH;
                 staticFiles.hostedPath = "/";
+                // Pre-compress + cache the static bundle (app.js ~500KB, style.css ~140KB) so
+                // they aren't re-gzipped per request.
+                staticFiles.precompressMaxSize = 8 * 1024 * 1024;
             });
             cfg.spaRoot.addHandler("/", ctx -> ctx.contentType("text/html").result(indexHtml));
             cfg.bundledPlugins.enableCors(cors -> cors.addRule(CorsPluginConfig.CorsRule::anyHost));
             cfg.concurrency.useVirtualThreads = true;
             cfg.startup.showJavalinBanner = false;
             cfg.http.maxRequestSize = MAX_REPLAY_BYTES;
+            // gzip the JS/CSS bundle + all JSON responses (brotli4j native dep isn't on the
+            // classpath, so gzip-only). Cuts first-load JS+CSS transfer ~640KB → ~160KB.
+            cfg.http.compressionStrategy = CompressionStrategy.GZIP;
 
             cfg.routes.before("/api/*", this::checkAuth);
             cfg.routes.before("/api/*", this::checkRateLimit);
@@ -120,6 +128,15 @@ public final class DashboardServer implements AutoCloseable {
 
             cfg.routes.exception(MailboxException.class, (e, ctx) ->
                     ctx.status(e.httpStatus()).result(e.httpMessage()));
+            // Client-input failures are 400, not Javalin's default 500: a malformed JSON body,
+            // a bad path/enum/address value, and MQL compile errors all surface as these. Genuine
+            // server bugs (NPE, IllegalStateException) still fall through to 500.
+            cfg.routes.exception(com.google.gson.JsonParseException.class, (e, ctx) ->
+                    ctx.status(400).result("malformed JSON body"));
+            cfg.routes.exception(NumberFormatException.class, (e, ctx) ->
+                    ctx.status(400).result("invalid number"));
+            cfg.routes.exception(IllegalArgumentException.class, (e, ctx) ->
+                    ctx.status(400).result(e.getMessage() == null ? "bad request" : e.getMessage()));
 
             registerRoutes(cfg.routes);
             registerWebSockets(cfg.routes);
@@ -131,6 +148,7 @@ public final class DashboardServer implements AutoCloseable {
         Thread.ofVirtual().name("web-icons-warmup").start(itemIcons::warm);
         scheduler.scheduleAtFixedRate(this::evictIdleScopes, 60, 60, TimeUnit.SECONDS);
         scheduler.scheduleAtFixedRate(this::evictDisconnectedPlayers, 60, 60, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(() -> postLimiter.sweepIdle(RATE_BUCKET_IDLE_NANOS), 5, 5, TimeUnit.MINUTES);
     }
 
     private void evictDisconnectedPlayers() {
@@ -165,8 +183,9 @@ public final class DashboardServer implements AutoCloseable {
     private void checkRateLimit(Context ctx) {
         String m = ctx.method().name();
         if (!"POST".equalsIgnoreCase(m) && !"DELETE".equalsIgnoreCase(m)) return;
-        String key = config.token() == null ? ctx.ip() : config.token();
-        if (!postLimiter.tryAcquire(key)) {
+        // Key on client IP, never the auth token: the token gates auth, the IP gates rate. Keying
+        // on the (constant) token would lump every tab/user/machine into one shared bucket.
+        if (!postLimiter.tryAcquire(ctx.ip())) {
             ctx.status(429).result("rate limit");
             ctx.skipRemainingHandlers();
         }

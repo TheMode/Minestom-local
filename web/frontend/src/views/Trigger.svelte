@@ -1,5 +1,6 @@
 <script lang="ts">
     import { api } from '../lib/api.ts';
+    import { players as playersStore } from '../state/players.svelte.ts';
     import { subscribeTopic } from '../state/bus.svelte.ts';
     import { Topics } from '../lib/topics.ts';
     import { debounce, fmtTime, shortUuid } from '../lib/util.ts';
@@ -20,15 +21,15 @@
 
     const refresh = debounce(async query => {
         try {
+            // Reuse the live players store instead of re-fetching /players on every keystroke.
+            const roster = playersStore.list;
             if (!query.trim()) {
-                const players = await api('/players');
-                preview = players;
-                status = { kind: 'dim', message: `Everyone · ${players.length} online` };
+                preview = roster;
+                status = { kind: 'dim', message: `Everyone · ${roster.length} online` };
             } else {
                 const r = await api('/query', { method: 'POST', body: { ql: query } });
                 const matches = r.matches || [];
-                const players = await api('/players');
-                const idx = new Map(players.map(p => [p.uuid, p]));
+                const idx = new Map(roster.map(p => [p.uuid, p]));
                 preview = matches.map(u => idx.get(u)).filter(Boolean);
                 status = { kind: matches.length ? 'ok' : 'dim', message: `${matches.length} matched · live` };
             }

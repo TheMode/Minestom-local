@@ -26,6 +26,9 @@ class McJsonTooltipState {
     #value: unknown = null;
     #x = 0;
     #y = 0;
+    // Cache the serialized text so a pure pointer-move (same value) doesn't re-run formatMcJson.
+    #cachedFor: unknown = {};
+    #cachedText: string | null = null;
 
     constructor() {
         if (typeof window === 'undefined') return;
@@ -58,8 +61,11 @@ class McJsonTooltipState {
             this.tip = null;
             return;
         }
-        const text = formatMcJson(this.#value);
-        this.tip = text ? { x: this.#x, y: this.#y, text } : null;
+        if (this.#value !== this.#cachedFor) {
+            this.#cachedFor = this.#value;
+            this.#cachedText = formatMcJson(this.#value);
+        }
+        this.tip = this.#cachedText ? { x: this.#x, y: this.#y, text: this.#cachedText } : null;
     }
 }
 

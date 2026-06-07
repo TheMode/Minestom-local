@@ -4,6 +4,7 @@ import net.minestom.server.network.ConnectionState;
 import net.minestom.server.network.NetworkBuffer;
 import net.minestom.server.network.packet.Packet;
 import net.minestom.web.Direction;
+import net.minestom.web.internal.Uuids;
 import net.minestom.web.internal.codec.PacketDecoder;
 import net.minestom.web.internal.persist.HistoryFile;
 import net.minestom.web.internal.session.Session;
@@ -54,7 +55,7 @@ public final class ReplaySource implements AutoCloseable {
                 long firstEventMs = Long.MIN_VALUE;
                 long replayStartedNs = 0L;
                 while (rs.next()) {
-                    final UUID cid = HistoryFile.uuidFromBytes(rs.getBytes(1));
+                    final UUID cid = Uuids.fromBytes(rs.getBytes(1));
                     final long ioEventSeq = rs.getLong(2);
                     final long ts = rs.getLong(3);
                     final Direction dir = HistoryFile.directionFromId(rs.getInt(4));
@@ -106,7 +107,7 @@ public final class ReplaySource implements AutoCloseable {
                 "SELECT id, address, init_state_sb, init_state_cb, init_compression FROM connections ORDER BY connect_ms ASC");
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                final UUID id = HistoryFile.uuidFromBytes(rs.getBytes(1));
+                final UUID id = Uuids.fromBytes(rs.getBytes(1));
                 final int sbId = rs.getInt(3);
                 final boolean sbNull = rs.wasNull();
                 final int cbId = rs.getInt(4);

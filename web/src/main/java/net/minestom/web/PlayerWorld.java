@@ -123,4 +123,15 @@ public final class PlayerWorld {
         unloadedChunks.clear();
         pendingChanges.clear();
     }
+
+    /// Dimension switch: drop every chunk but record its key as an unload so the live minimap
+    /// frame tells the client to remove the now-stale tiles — vanilla sends no per-chunk
+    /// `UnloadChunkPacket` across a dimension change, so without this old tiles linger as ghosts.
+    /// A chunk reloaded at the same coords in the new dimension removes itself from
+    /// `unloadedChunks` on load, so it is never both unloaded and loaded in the same frame.
+    public void clearForDimensionChange() {
+        final Set<Long> previous = new HashSet<>(chunks.keySet());
+        clear();
+        unloadedChunks.addAll(previous);
+    }
 }

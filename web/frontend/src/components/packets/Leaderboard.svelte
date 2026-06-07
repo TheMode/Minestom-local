@@ -1,17 +1,12 @@
-<script module lang="ts">
+<script lang="ts">
     import { pktLabel } from '../../lib/packetAgg.ts';
     import { humanBytes, humanNumber } from '../../lib/util.ts';
-
-    function splitUnit(s) {
-        const m = String(s ?? '').match(/^([\d.,]+)\s*(\S*)$/);
-        return m ? [m[1], m[2]] : [String(s ?? ''), ''];
-    }
-
-    export { splitUnit };
-</script>
-
-<script lang="ts">
     import ProgressBar from '../ui/ProgressBar.svelte';
+
+    function splitUnit(s: string): [string, string] {
+        const m = String(s ?? '').match(/^([\d.,]+)\s*(\S*)$/);
+        return m ? [m[1]!, m[2]!] : [String(s ?? ''), ''];
+    }
 
     let { agg, sortBy, max = 14, version = 0 } = $props();
 

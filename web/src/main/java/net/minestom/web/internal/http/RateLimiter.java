@@ -20,6 +20,7 @@ public final class RateLimiter {
         Bucket b = buckets.computeIfAbsent(key, k -> new Bucket(capacity));
         synchronized (b) {
             long now = System.nanoTime();
+            b.lastAccessNanos = now;
             long elapsed = now - b.lastRefillNanos;
             if (elapsed > 0) {
                 long add = elapsed * refillPerSecond / 1_000_000_000L;
@@ -36,9 +37,20 @@ public final class RateLimiter {
         }
     }
 
+    /// Drop buckets untouched for longer than `idleNanos`. An idle bucket would refill to full
+    /// capacity anyway, so recreating it on the next request loses no meaningful rate state —
+    /// this just keeps the per-key map from growing without bound. Call periodically.
+    public void sweepIdle(long idleNanos) {
+        final long cutoff = System.nanoTime() - idleNanos;
+        buckets.values().removeIf(b -> {
+            synchronized (b) { return b.lastAccessNanos < cutoff; }
+        });
+    }
+
     private static final class Bucket {
         long tokens;
         long lastRefillNanos = System.nanoTime();
+        long lastAccessNanos = System.nanoTime();
 
         Bucket(long initialTokens) {
             this.tokens = initialTokens;

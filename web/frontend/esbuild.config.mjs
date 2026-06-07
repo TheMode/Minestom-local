@@ -18,7 +18,9 @@ const opts = {
     target: 'es2022',
     sourcemap: prod ? false : 'inline',
     minify: prod,
-    conditions: ['svelte', 'browser'],
+    // Resolve Svelte's production export in prod so its dev-only warning/check code is dropped
+    // from the bundle (pairs with compilerOptions.dev below).
+    conditions: prod ? ['production', 'svelte', 'browser'] : ['development', 'svelte', 'browser'],
     plugins: [
         esbuildSvelte({
             compilerOptions: { dev: !prod, css: 'injected' },
