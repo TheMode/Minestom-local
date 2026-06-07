@@ -67,7 +67,6 @@
     {#if open}
         {#if tableMode && element.kind === 'record'}
             <div class="coll__tbl-head" style:--cols={recordCols.length}>
-                <span></span>
                 <div class="coll__tbl-cols">
                     {#each recordCols as c (c.name)}<span>{c.name}</span>{/each}
                 </div>
@@ -80,7 +79,6 @@
             {/if}
             {#each items as item, i (i)}
                 <div class="coll__row">
-                    <span class="coll__handle" title="reorder">⋮⋮</span>
                     {#if tableMode && element.kind === 'record'}
                         <div class="coll__tbl-cells" style:--cols={recordCols.length}>
                             {#each recordCols as c (c.name)}

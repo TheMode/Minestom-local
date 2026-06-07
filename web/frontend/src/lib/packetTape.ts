@@ -19,6 +19,10 @@ export class PacketTape {
     /// Oldest rows are dropped once over. `loadHistory` may exceed it transiently.
     maxRows = 50_000;
 
+    /// Live per-class row counts, maintained incrementally on insert/evict so consumers don't
+    /// re-scan the whole buffer every frame just to tally classes.
+    readonly classCounts = new Map<string, number>();
+
     minSeq = 0;
     maxSeq = 0;
 
@@ -31,6 +35,7 @@ export class PacketTape {
     clear() {
         this.rows.length = 0;
         this.pending = [];
+        this.classCounts.clear();
         this.minSeq = 0;
         this.maxSeq = 0;
     }
@@ -87,23 +92,38 @@ export class PacketTape {
     private trim() {
         const over = this.rows.length - this.maxRows;
         if (over <= 0) return;
-        this.rows.splice(0, over);
+        const evicted = this.rows.splice(0, over);
+        for (const r of evicted) this.dec(r.className);
         this.minSeq = this.rows.length ? this.rows[0]!.seq : 0;
     }
 
     private upsert(row: PacketRow): boolean {
         const idx = this.lowerBound(row.seq);
         if (idx < this.rows.length && this.rows[idx]!.seq === row.seq) {
-            delete (this.rows[idx]! as PacketRow & { summary?: string }).summary;
-            Object.assign(this.rows[idx]!, row);
+            const existing = this.rows[idx]!;
+            const oldClass = existing.className;
+            delete (existing as PacketRow & { summary?: string }).summary;
+            Object.assign(existing, row);
+            if (existing.className !== oldClass) { this.dec(oldClass); this.inc(existing.className); }
             return true;
         }
 
         this.rows.splice(idx, 0, row);
+        this.inc(row.className);
         if (this.rows.length === 1) this.minSeq = row.seq;
         else if (row.seq < this.minSeq) this.minSeq = row.seq;
         if (row.seq > this.maxSeq) this.maxSeq = row.seq;
         return true;
+    }
+
+    private inc(cls: string) {
+        this.classCounts.set(cls, (this.classCounts.get(cls) ?? 0) + 1);
+    }
+
+    private dec(cls: string) {
+        const n = (this.classCounts.get(cls) ?? 0) - 1;
+        if (n > 0) this.classCounts.set(cls, n);
+        else this.classCounts.delete(cls);
     }
 
     rowAtSeq(seq: number): PacketRow | undefined {

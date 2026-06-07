@@ -38,22 +38,14 @@ public final class PatchValue {
         @Override
         public <D> Result<Map<String, Object>> decode(Transcoder<D> coder, D value) {
             Result<Transcoder.MapLike<D>> mapResult = coder.getMap(value);
-            if (!(mapResult instanceof Result.Ok<Transcoder.MapLike<D>>(Transcoder.MapLike<D> map))) {
-                return mapResult instanceof Result.Error<Transcoder.MapLike<D>> err
-                        ? err.cast() : new Result.Error<>("decode failed");
-            }
+            if (!(mapResult instanceof Result.Ok<Transcoder.MapLike<D>>(Transcoder.MapLike<D> map))) return mapResult.cast();
             Map<String, Object> out = new LinkedHashMap<>(map.size());
             for (String key : map.keys()) {
                 Result<D> raw = map.getValue(key);
-                if (!(raw instanceof Result.Ok<D>(D item))) {
-                    return raw instanceof Result.Error<D> err ? err.cast() : new Result.Error<>("decode failed");
-                }
+                if (!(raw instanceof Result.Ok<D>(D item))) return raw.cast();
                 Result<Object> decoded = CODEC.decode(coder, item);
-                if (decoded instanceof Result.Ok<Object>(Object object)) {
-                    out.put(key, object);
-                } else {
-                    return decoded instanceof Result.Error<Object> err ? err.cast() : new Result.Error<>("decode failed");
-                }
+                if (!(decoded instanceof Result.Ok<Object>(Object object))) return decoded.cast();
+                out.put(key, object);
             }
             return new Result.Ok<>(out);
         }
@@ -91,22 +83,17 @@ public final class PatchValue {
                 LOGGER.warn("no typed codec for {}; falling back to raw transcoder (wire shape may be wrong)",
                         value.getClass().getName());
             }
-            Result<D> encoded = Codec.RAW_VALUE.encode(coder, RawValue.of(Transcoder.JAVA, value));
-            if (!(encoded instanceof Result.Ok<D>(D boxed)) || !(boxed instanceof RawValue raw)) {
-                return encoded instanceof Result.Error<D> err ? err : new Result.Error<>("encode failed");
-            }
-            return raw.convertTo(coder);
+            return Codec.RAW_VALUE.encode(coder, RawValue.of(Transcoder.JAVA, value))
+                    .map(boxed -> boxed instanceof RawValue raw
+                            ? raw.convertTo(coder) : new Result.Error<>("raw transcoder did not box a RawValue"));
         }
 
         private <D> Result<D> encodeList(Transcoder<D> coder, List<?> list) {
             Transcoder.ListBuilder<D> builder = coder.createList(list.size());
             for (Object element : list) {
                 Result<D> encoded = encode(coder, element);
-                if (encoded instanceof Result.Ok<D>(D item)) {
-                    builder.add(item);
-                } else {
-                    return encoded instanceof Result.Error<D> err ? err : new Result.Error<>("encode failed");
-                }
+                if (!(encoded instanceof Result.Ok<D>(D item))) return encoded;
+                builder.add(item);
             }
             return new Result.Ok<>(builder.build());
         }
@@ -116,11 +103,8 @@ public final class PatchValue {
                 JsonObject object = new JsonObject();
                 for (Map.Entry<String, ?> entry : map.entrySet()) {
                     Result<D> encoded = encode(coder, entry.getValue());
-                    if (encoded instanceof Result.Ok<D>(D item)) {
-                        object.add(entry.getKey(), (JsonElement) item);
-                    } else {
-                        return encoded instanceof Result.Error<D> err ? err : new Result.Error<>("encode failed");
-                    }
+                    if (!(encoded instanceof Result.Ok<D>(D item))) return encoded;
+                    object.add(entry.getKey(), (JsonElement) item);
                 }
                 @SuppressWarnings("unchecked")
                 D boxed = (D) object;
@@ -129,23 +113,16 @@ public final class PatchValue {
             Transcoder.MapBuilder<D> builder = coder.createMap();
             for (Map.Entry<String, ?> entry : map.entrySet()) {
                 Result<D> encoded = encode(coder, entry.getValue());
-                if (encoded instanceof Result.Ok<D>(D item)) {
-                    builder.put(entry.getKey(), item);
-                } else {
-                    return encoded instanceof Result.Error<D> err ? err : new Result.Error<>("encode failed");
-                }
+                if (!(encoded instanceof Result.Ok<D>(D item))) return encoded;
+                builder.put(entry.getKey(), item);
             }
             return new Result.Ok<>(builder.build());
         }
 
         @Override
         public <D> Result<Object> decode(Transcoder<D> coder, D value) {
-            Result<RawValue> decoded = Codec.RAW_VALUE.decode(coder, value);
-            if (!(decoded instanceof Result.Ok<RawValue>(RawValue raw))) {
-                return decoded instanceof Result.Error<RawValue> err ? err.cast() : new Result.Error<>("decode failed");
-            }
-            Result<Object> converted = raw.convertTo(Transcoder.JAVA);
-            return converted.mapResult(PatchValue::nullifyOptional);
+            return Codec.RAW_VALUE.decode(coder, value)
+                    .map(raw -> raw.convertTo(Transcoder.JAVA).mapResult(PatchValue::nullifyOptional));
         }
     };
 

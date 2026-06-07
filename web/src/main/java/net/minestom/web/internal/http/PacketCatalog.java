@@ -168,6 +168,13 @@ public final class PacketCatalog {
     private static final Subject SUBJ_WORLD_VIEWPORT = new Subject("world.viewport", "viewport", Group.WORLD);
     private static final Subject SUBJ_WORLD_MISC = new Subject("world.world", "world", Group.WORLD);
 
+    /// Entity- and window-scoped packets mapped to how their id is read off the instance. Single
+    /// source of truth: [#buildSubjectMap] registers these classes for classification and
+    /// [#entitySubject]/[#windowSubject] read the id from the same table, so the class list lives
+    /// in exactly one place. Declared before [#SUBJECT_BY_CLASS] so they initialise first.
+    private static final Map<Class<? extends Packet>, Function<Packet, Integer>> ENTITY_ID = entityIdExtractors();
+    private static final Map<Class<? extends Packet>, Function<Packet, Integer>> WINDOW_ID = windowIdExtractors();
+
     private static final Map<Class<? extends Packet>, Function<Packet, Subject>> SUBJECT_BY_CLASS = buildSubjectMap();
 
     /// Static subjects keyed by id, for rehydrating a [Subject] from a persisted id string —
@@ -245,13 +252,8 @@ public final class PacketCatalog {
         put(m, constant(SUBJ_SELF_ATTRIBUTES), EntityAttributesPacket.class);
         put(m, constant(SUBJ_SELF_COMBAT), DamageEventPacket.class);
         put(m, constant(SUBJ_SELF_SESSION), JoinGamePacket.class, RespawnPacket.class, ChangeGameStatePacket.class);
-        // entity-scoped — id/label drilldown via entitySubject
-        put(m, PacketCatalog::entitySubject,
-                SpawnEntityPacket.class, EntityPositionPacket.class, EntityPositionAndRotationPacket.class,
-                EntityRotationPacket.class, EntityPositionSyncPacket.class, EntityTeleportPacket.class,
-                EntityMetaDataPacket.class, EntityHeadLookPacket.class, EntityVelocityPacket.class,
-                EntityAnimationPacket.class, EntityStatusPacket.class, EntityEquipmentPacket.class,
-                DestroyEntitiesPacket.class);
+        // entity-scoped — id/label drilldown via entitySubject (classes sourced from ENTITY_ID)
+        for (Class<? extends Packet> c : ENTITY_ID.keySet()) m.put(c, PacketCatalog::entitySubject);
         // world — chunks, blocks, lighting, time, viewport
         put(m, constant(SUBJ_WORLD_CHUNK), ChunkDataPacket.class, UnloadChunkPacket.class);
         put(m, constant(SUBJ_WORLD_BLOCK), BlockChangePacket.class, MultiBlockChangePacket.class,
@@ -269,11 +271,8 @@ public final class PacketCatalog {
         put(m, constant(SUBJ_HUD_ACTIONBAR), ActionBarPacket.class);
         put(m, constant(SUBJ_HUD_TITLE), SetTitleTextPacket.class, SetTitleSubTitlePacket.class,
                 SetTitleTimePacket.class, ClearTitlesPacket.class);
-        // windows / inventory — id/label drilldown via windowSubject
-        put(m, PacketCatalog::windowSubject,
-                OpenWindowPacket.class, CloseWindowPacket.class, SetSlotPacket.class,
-                SetPlayerInventorySlotPacket.class, WindowItemsPacket.class, SetCursorItemPacket.class,
-                HeldItemChangePacket.class, ClientHeldItemChangePacket.class, WindowPropertyPacket.class);
+        // windows / inventory — id/label drilldown via windowSubject (classes sourced from WINDOW_ID)
+        for (Class<? extends Packet> c : WINDOW_ID.keySet()) m.put(c, PacketCatalog::windowSubject);
         // chat
         put(m, constant(SUBJ_CHAT), SystemChatPacket.class, PlayerChatMessagePacket.class,
                 ClientChatMessagePacket.class, ClientCommandChatPacket.class, ClientSignedCommandChatPacket.class);
@@ -306,39 +305,56 @@ public final class PacketCatalog {
     }
 
     private static Subject entitySubject(Packet packet) {
-        final Integer id = switch (packet) {
-            case SpawnEntityPacket p -> p.entityId();
-            case EntityPositionPacket p -> p.entityId();
-            case EntityPositionAndRotationPacket p -> p.entityId();
-            case EntityRotationPacket p -> p.entityId();
-            case EntityPositionSyncPacket p -> p.entityId();
-            case EntityTeleportPacket p -> p.entityId();
-            case EntityMetaDataPacket p -> p.entityId();
-            case EntityHeadLookPacket p -> p.entityId();
-            case EntityVelocityPacket p -> p.entityId();
-            case EntityAnimationPacket p -> p.entityId();
-            case EntityStatusPacket p -> p.entityId();
-            case EntityEquipmentPacket p -> p.entityId();
-            case DestroyEntitiesPacket p -> p.entityIds().size() == 1 ? p.entityIds().getFirst() : null;
-            default -> null;
-        };
+        final Function<Packet, Integer> idOf = ENTITY_ID.get(packet.getClass());
+        final Integer id = idOf == null ? null : idOf.apply(packet);
         return id == null ? SUBJ_ENT_ALL : new Subject("ent." + id, "Entity #" + id, Group.ENT);
     }
 
     private static Subject windowSubject(Packet packet) {
-        final int id = switch (packet) {
-            case OpenWindowPacket p -> p.windowId();
-            case CloseWindowPacket p -> p.windowId();
-            case SetSlotPacket p -> p.windowId();
-            case WindowItemsPacket p -> p.windowId();
-            case WindowPropertyPacket p -> p.windowId();
-            // always the player inventory
-            case HeldItemChangePacket _, ClientHeldItemChangePacket _,
-                 SetPlayerInventorySlotPacket _, SetCursorItemPacket _ -> 0;
-            default -> -1;
-        };
+        final Function<Packet, Integer> idOf = WINDOW_ID.get(packet.getClass());
+        final int id = idOf == null ? -1 : idOf.apply(packet);
         if (id == 0 || id == -1) return SUBJ_WIN_INV;
         return new Subject("win." + id, "Window #" + id, Group.WIN);
+    }
+
+    /// Entity-scoped packet class → entity-id reader. `classify` only routes a packet here when its
+    /// exact class is a key, so the cast always matches. `null` (e.g. multi-target destroy) → the
+    /// "all entities" subject.
+    private static Map<Class<? extends Packet>, Function<Packet, Integer>> entityIdExtractors() {
+        Map<Class<? extends Packet>, Function<Packet, Integer>> m = new HashMap<>();
+        m.put(SpawnEntityPacket.class, p -> ((SpawnEntityPacket) p).entityId());
+        m.put(EntityPositionPacket.class, p -> ((EntityPositionPacket) p).entityId());
+        m.put(EntityPositionAndRotationPacket.class, p -> ((EntityPositionAndRotationPacket) p).entityId());
+        m.put(EntityRotationPacket.class, p -> ((EntityRotationPacket) p).entityId());
+        m.put(EntityPositionSyncPacket.class, p -> ((EntityPositionSyncPacket) p).entityId());
+        m.put(EntityTeleportPacket.class, p -> ((EntityTeleportPacket) p).entityId());
+        m.put(EntityMetaDataPacket.class, p -> ((EntityMetaDataPacket) p).entityId());
+        m.put(EntityHeadLookPacket.class, p -> ((EntityHeadLookPacket) p).entityId());
+        m.put(EntityVelocityPacket.class, p -> ((EntityVelocityPacket) p).entityId());
+        m.put(EntityAnimationPacket.class, p -> ((EntityAnimationPacket) p).entityId());
+        m.put(EntityStatusPacket.class, p -> ((EntityStatusPacket) p).entityId());
+        m.put(EntityEquipmentPacket.class, p -> ((EntityEquipmentPacket) p).entityId());
+        m.put(DestroyEntitiesPacket.class, p -> {
+            final var ids = ((DestroyEntitiesPacket) p).entityIds();
+            return ids.size() == 1 ? ids.getFirst() : null;
+        });
+        return Map.copyOf(m);
+    }
+
+    /// Window-scoped packet class → window-id reader. Packets that always target the player
+    /// inventory yield 0; `windowSubject` folds 0 (and the unreachable -1) into the inventory subject.
+    private static Map<Class<? extends Packet>, Function<Packet, Integer>> windowIdExtractors() {
+        Map<Class<? extends Packet>, Function<Packet, Integer>> m = new HashMap<>();
+        m.put(OpenWindowPacket.class, p -> ((OpenWindowPacket) p).windowId());
+        m.put(CloseWindowPacket.class, p -> ((CloseWindowPacket) p).windowId());
+        m.put(SetSlotPacket.class, p -> ((SetSlotPacket) p).windowId());
+        m.put(WindowItemsPacket.class, p -> ((WindowItemsPacket) p).windowId());
+        m.put(WindowPropertyPacket.class, p -> ((WindowPropertyPacket) p).windowId());
+        for (Class<? extends Packet> c : List.of(HeldItemChangePacket.class, ClientHeldItemChangePacket.class,
+                SetPlayerInventorySlotPacket.class, SetCursorItemPacket.class)) {
+            m.put(c, p -> 0);
+        }
+        return Map.copyOf(m);
     }
 
     private static Subject bossSubject(Packet packet) {

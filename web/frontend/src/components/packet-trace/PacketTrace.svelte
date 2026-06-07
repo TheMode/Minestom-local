@@ -150,10 +150,11 @@
 
     const prepareRow = $derived((p: PacketRow) => prepareParsedRow(p, bookmarkMap));
 
+    // Counts are maintained incrementally by the tape; copy its map (O(distinct classes)) rather
+    // than re-tallying the whole buffer every frame. tapeVersion drives the refresh + new ref.
     const classCounts = $derived.by(() => {
-        const m = new Map<string, number>();
-        for (const p of allRows) m.set(p.className, (m.get(p.className) || 0) + 1);
-        return m;
+        tapeVersion;
+        return tape ? new Map(tape.classCounts) : new Map<string, number>();
     });
 
     const classColors = $derived.by(() => {

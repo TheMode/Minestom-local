@@ -2408,20 +2408,11 @@
     }
     .coll__row {
         display: grid;
-        grid-template-columns: 24px minmax(0, 1fr) 22px;
+        grid-template-columns: minmax(0, 1fr) 22px;
         gap: 6px;
         align-items: start;
     }
     .coll__row--map { grid-template-columns: minmax(120px, 1fr) 14px minmax(0, 1.2fr) 22px; }
-    .coll__handle {
-        color: var(--ink-4);
-        font-size: var(--t-xs);
-        padding-top: 8px;
-        text-align: center;
-        cursor: grab;
-        user-select: none;
-    }
-    .coll__handle:hover { color: var(--ink-2); }
     .coll__sep {
         color: var(--ink-4);
         padding-top: 8px;
@@ -2462,7 +2453,7 @@
     /* Table mode (list-of-record). */
     .coll--table .coll__body { padding: 0; gap: 0; }
     .coll--table .coll__row {
-        grid-template-columns: 24px minmax(0, 1fr) 22px;
+        grid-template-columns: minmax(0, 1fr) 22px;
         padding: 4px var(--pad-2);
         border-bottom: 1px solid color-mix(in oklab, var(--line) 50%, transparent);
         align-items: stretch;
@@ -2470,7 +2461,7 @@
     .coll--table .coll__row:last-of-type { border-bottom: 0; }
     .coll__tbl-head {
         display: grid;
-        grid-template-columns: 24px minmax(0, 1fr) 22px;
+        grid-template-columns: minmax(0, 1fr) 22px;
         gap: 6px;
         padding: 6px var(--pad-2);
         background: color-mix(in oklab, var(--bg-2) 50%, transparent);
