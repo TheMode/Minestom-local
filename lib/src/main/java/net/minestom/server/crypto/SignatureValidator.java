@@ -1,0 +1,78 @@
+package net.minestom.server.crypto;
+
+import net.minestom.server.network.NetworkBuffer;
+import net.minestom.server.utils.crypto.KeyUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.security.*;
+import java.util.function.Consumer;
+
+/**
+ * General purpose functional interface to verify signatures.<br>
+ * Built in validators:
+ * <ul>
+ *     <li>{@link SignatureValidator#PASS}: will always report true</li>
+ *     <li>{@link SignatureValidator#FAIL}: will always report false</li>
+ *     <li>{@link SignatureValidator#YGGDRASIL}: Uses SHA1 with RSA and Yggdrasil Public Key for
+ *     verifying signatures</li>
+ *     <li>{@link SignatureValidator#from(PlayerPublicKey)}: Uses SHA256 with RSA and the
+ *     given {@link PlayerPublicKey#publicKey()}</li>
+ *     <li>{@link SignatureValidator#from(PublicKey, KeyUtils.SignatureAlgorithm)}: General purpose factory method</li>
+ * </ul>
+ */
+@FunctionalInterface
+public interface SignatureValidator {
+    SignatureValidator PASS = (_, _) -> true;
+    SignatureValidator FAIL = (_, _) -> false;
+    SignatureValidator YGGDRASIL = createYggdrasilValidator();
+
+    /**
+     * Validate signature. This should not throw any exception instead it should
+     * return false.
+     *
+     * @return true only if the signature is valid
+     */
+    boolean validate(byte[] payload, byte[] signature);
+
+    default boolean validate(Consumer<NetworkBuffer> payload, byte[] signature) {
+        return validate(NetworkBuffer.makeArray(payload), signature);
+    }
+
+    static SignatureValidator from(PublicKey publicKey, KeyUtils.SignatureAlgorithm algorithm) {
+        return ((payload, signature) -> {
+            try {
+                final Signature sig = Signature.getInstance(algorithm.name());
+                sig.initVerify(publicKey);
+                sig.update(payload);
+                return sig.verify(signature);
+            } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
+                return false;
+            }
+        });
+    }
+
+    /**
+     * Creates a validator from a player's public key using SHA256 with RSA.
+     *
+     * @param playerPublicKey source of the key
+     * @return the validator
+     */
+    static SignatureValidator from(PlayerPublicKey playerPublicKey) {
+        return from(playerPublicKey.publicKey(), KeyUtils.SignatureAlgorithm.SHA256withRSA);
+    }
+
+    private static SignatureValidator createYggdrasilValidator() {
+        final Logger logger = LoggerFactory.getLogger(SignatureValidator.class);
+        try (var stream = SignatureValidator.class.getResourceAsStream("/yggdrasil_session_pubkey.der")) {
+            if (stream == null) {
+                logger.error("Couldn't find Yggdrasil public key, falling back to prohibiting validator!");
+                return FAIL;
+            }
+            return from(KeyUtils.publicRSAKeyFrom(stream.readAllBytes()), KeyUtils.SignatureAlgorithm.SHA1withRSA);
+        } catch (Exception e) {
+            logger.error("Exception while reading Yggdrasil public key, falling back to prohibiting validator!", e);
+            return FAIL;
+        }
+    }
+}

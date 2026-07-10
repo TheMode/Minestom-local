@@ -1,0 +1,19 @@
+package net.minestom.server.utils.async;
+
+import org.jetbrains.annotations.ApiStatus;
+
+import java.util.concurrent.CompletableFuture;
+
+@ApiStatus.Internal
+public final class AsyncUtils {
+    public static final CompletableFuture<Void> VOID_FUTURE = CompletableFuture.completedFuture(null);
+
+    public static <T> CompletableFuture<T> empty() {
+        //noinspection unchecked
+        return (CompletableFuture<T>) VOID_FUTURE;
+    }
+
+    public static CompletableFuture<Void> runAsync(Runnable runnable) {
+        return CompletableFuture.runAsync(runnable);
+    }
+}
