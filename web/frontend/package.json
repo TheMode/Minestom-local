@@ -1,0 +1,19 @@
+{
+  "name": "minestom-console-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "check": "tsc --project ./tsconfig.json",
+    "watch": "node esbuild.config.mjs --watch"
+  },
+  "dependencies": {
+    "svelte": "5.55.7"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "esbuild-svelte": "0.9.5",
+    "typescript": "^6.0.3"
+  }
+}

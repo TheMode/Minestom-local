@@ -48,7 +48,7 @@ final class DynamicRegistryImpl<T> implements DynamicRegistry<T> {
     private final Map<TagKey<T>, RegistryTagImpl.Backed<T>> tags;
 
     private final Key key;
-    private final Codec<T> codec;
+    private final @Nullable Codec<T> codec;
 
     DynamicRegistryImpl(Key key, @Nullable Codec<T> codec) {
         this.key = key;
@@ -115,9 +115,8 @@ final class DynamicRegistryImpl<T> implements DynamicRegistry<T> {
 
     @Override
     public @Nullable RegistryKey<T> getKey(Key key) {
-        if (!keyToValue.containsKey(key))
-            return null;
-        return new RegistryKeyImpl<>(key);
+        final RegistryKey<T> registryKey = new RegistryKeyImpl<>(key);
+        return keyToId.containsKey(registryKey) ? registryKey : null;
     }
 
     @Override
@@ -244,6 +243,51 @@ final class DynamicRegistryImpl<T> implements DynamicRegistry<T> {
         }
 
         return createRegistryDataPacket(registries, false);
+    }
+
+    @Override
+    public void applyRegistryDataPacket(Registries registries, RegistryDataPacket packet) {
+        Check.argCondition(!key.asString().equals(packet.registryId()),
+                "Registry data packet {0} cannot be applied to registry {1}", packet.registryId(), key);
+        final Transcoder<BinaryTag> transcoder = codec != null ? new RegistryTranscoder<>(Transcoder.NBT, registries) : null;
+        synchronized (REGISTRY_LOCK) {
+            final Map<Key, T> previousValues = new HashMap<>(keyToValue);
+            final Map<RegistryKey<T>, DataPack> previousPacks = new HashMap<>(packById.size() * 2);
+            for (int i = 0; i < idToKey.size(); i++) {
+                previousPacks.put(idToKey.get(i), packById.get(i));
+            }
+
+            idToValue.clear();
+            idToKey.clear();
+            keyToId.clear();
+            keyToValue.clear();
+            valueToKey.clear();
+            packById.clear();
+
+            final List<RegistryDataPacket.Entry> entries = packet.entries();
+            for (int id = 0; id < entries.size(); id++) {
+                final RegistryDataPacket.Entry entry = entries.get(id);
+                final RegistryKey<T> registryKey = new RegistryKeyImpl<>(Key.key(entry.id()));
+                final T value = decodeRegistryDataValue(transcoder, entry, previousValues.get(registryKey.key()));
+
+                idToKey.add(registryKey);
+                idToValue.add(value);
+                keyToId.put(registryKey, id);
+                if (value != null) {
+                    keyToValue.put(registryKey.key(), value);
+                    valueToKey.put(value, registryKey);
+                }
+                packById.add(previousPacks.get(registryKey));
+            }
+            vanillaRegistryDataPacket.invalidate();
+        }
+    }
+
+    private @Nullable T decodeRegistryDataValue(@Nullable Transcoder<BinaryTag> transcoder,
+                                      RegistryDataPacket.Entry entry, @Nullable T fallback) {
+        if (transcoder == null || entry.data() == null) return fallback;
+        final Result<T> result = codec.decode(transcoder, entry.data());
+        return result instanceof Result.Ok(T value) ? value : fallback;
     }
 
     @Override

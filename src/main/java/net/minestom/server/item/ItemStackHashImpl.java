@@ -76,5 +76,10 @@ final class ItemStackHashImpl {
             addedComponents = Map.copyOf(addedComponents);
             removedComponents = Set.copyOf(removedComponents);
         }
+
+        @Override
+        public ItemStack asItemStack() {
+            return ItemStack.of(material, amount);
+        }
     }
 }

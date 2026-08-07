@@ -39,6 +39,7 @@ import java.util.Objects;
 public class Main {
 
     static void main(String[] args) {
+        System.setProperty("minestom.registry.unsafe-ops", "true"); // TEMP for proxy
         System.setProperty("minestom.new-socket-write-lock", "true");
         System.setProperty("minestom.registry.unsafe-ops", "true");
         MinecraftServer.setCompressionThreshold(0);
@@ -171,7 +172,10 @@ public class Main {
         // useful for testing - we don't need to worry about event calls so just set this to a long time
         OpenToLAN.open(new OpenToLANConfig().eventCallDelay(Duration.of(1, TimeUnit.DAY)));
 
-        minecraftServer.start("0.0.0.0", 25565);
+        // Optional web dashboard. When enabled the proxy holds the public port and forwards to
+        // the server below; when disabled the server binds the public port directly.
+        WebInterface.register();
+        minecraftServer.start(WebInterface.bindHost(), WebInterface.bindPort());
 //        minecraftServer.start(java.net.UnixDomainSocketAddress.of("minestom-demo.sock"));
         //Runtime.getRuntime().addShutdownHook(new Thread(MinecraftServer::stopCleanly));
     }

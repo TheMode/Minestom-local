@@ -5,6 +5,7 @@ import net.minestom.server.codec.Codec;
 import net.minestom.server.entity.Player;
 import net.minestom.server.gamedata.DataPack;
 import net.minestom.server.network.packet.server.SendablePacket;
+import net.minestom.server.network.packet.server.configuration.RegistryDataPacket;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
@@ -149,5 +150,8 @@ public sealed interface DynamicRegistry<T> extends Registry<T> permits DynamicRe
      */
     @ApiStatus.Internal
     SendablePacket registryDataPacket(Registries registries, boolean excludeVanilla);
+
+    @ApiStatus.Internal
+    void applyRegistryDataPacket(Registries registries, RegistryDataPacket packet);
 
 }

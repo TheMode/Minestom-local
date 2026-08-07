@@ -2,6 +2,7 @@ package net.minestom.server.registry;
 
 import net.minestom.server.network.packet.server.SendablePacket;
 import net.minestom.server.network.packet.server.common.TagsPacket;
+import net.minestom.server.network.packet.server.configuration.RegistryDataPacket;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,15 @@ final class RegistriesImpl {
             entries.add(registry.tagRegistry());
         }
         return new TagsPacket(entries);
+    }
+
+    static void applyRegistryDataPacket(Registries registries, RegistryDataPacket packet) {
+        for (DynamicRegistry<?> registry : configurationRegistries(registries)) {
+            if (registry.key().asString().equals(packet.registryId())) {
+                registry.applyRegistryDataPacket(registries, packet);
+                return;
+            }
+        }
     }
 
     private static List<DynamicRegistry<?>> configurationRegistries(Registries registries) {

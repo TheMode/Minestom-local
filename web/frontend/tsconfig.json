@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "allowImportingTsExtensions": true,
+    "checkJs": false,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": false,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": false,
+    "strict": false,
+    "target": "ES2022",
+    "useDefineForClassFields": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.svelte"],
+  "exclude": ["node_modules"]
+}

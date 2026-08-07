@@ -386,6 +386,10 @@ public sealed interface ItemStack extends TagReadable, DataComponent.Holder, Hov
             return ItemStackHashImpl.of(new RegistryTranscoder<>(Transcoder.CRC32_HASH, registries), itemStack);
         }
 
+        default ItemStack asItemStack() {
+            return ItemStack.AIR;
+        }
+
         NetworkBuffer.Type<Hash> NETWORK_TYPE = ItemStackHashImpl.NETWORK_TYPE;
     }
 
